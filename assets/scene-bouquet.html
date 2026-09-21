@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scene - Bouquet Bloom</title>
+<style>
+  html,body{margin:0;height:100%;background:#edeae2;overflow:hidden}
+  canvas{display:block;width:100vw;height:100vh}
+  #hint{position:fixed;left:16px;bottom:14px;font:12px/1.3 system-ui,sans-serif;color:rgba(20,19,15,.45);pointer-events:none}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="hint">move the cursor - the bouquet opens</div>
+<script type="module">
+  import { initBouquet } from './bouquet-bloom.js'
+  window.__b = initBouquet(document.getElementById('scene'))
+</script>
+</body>
+</html>

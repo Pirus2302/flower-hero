@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Вариант A – Букет раскрывается</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+/* ---- Halden skin: warm paper, one brand red spent on surfaces ---- */
+:root{
+  --paper:#edeae2;      /* the ground */
+  --paper-lt:#f4f2ed;   /* type over red */
+  --sand:#d8d3c0;       /* hairlines, chips, pills */
+  --ink:#14130f;        /* strong copy */
+  --stone:#6e6a60;      /* quiet counts */
+  --red:#c40f2e;        /* the one ink */
+  --hair:.6px solid rgba(20,19,15,.16);
+  --serif:'Cormorant',Georgia,serif;
+  --sans:'Manrope',system-ui,sans-serif;
+  --ease:cubic-bezier(.22,.7,.2,1);
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
+canvas#scene{position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:0}
+
+/* ---------- masthead ---------- */
+.hero{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(16px,2.2vw,28px) clamp(16px,3vw,40px);pointer-events:none}
+.hero > *{pointer-events:auto}
+.mast{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-bottom:14px;border-bottom:var(--hair)}
+.mark{font-family:var(--serif);font-size:26px;letter-spacing:.02em;line-height:1}
+.mark b{font-weight:500}
+.mark sup{font-family:var(--sans);font-size:9px;font-weight:800;letter-spacing:.16em;vertical-align:super;color:var(--stone)}
+.nav{display:flex;gap:clamp(14px,2vw,30px);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.nav a{color:var(--ink);text-decoration:none;position:relative;padding:4px 2px}
+.nav a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--red);transform:scaleX(0);transform-origin:left;transition:transform .4s var(--ease)}
+.nav a:hover::after{transform:scaleX(1)}
+.mast-right{display:flex;align-items:center;gap:14px;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--stone)}
+.chip{border:var(--hair);border-radius:100px;padding:7px 14px;background:rgba(244,242,237,.6);backdrop-filter:blur(6px);color:var(--ink)}
+
+/* ---------- centre copy: kicker over a two-line statement ---------- */
+.centre{position:absolute;left:50%;top:clamp(21%,25vh,29%);transform:translateX(-50%);width:min(960px,90vw);text-align:center}
+.kicker{font-size:11px;font-weight:800;letter-spacing:.34em;text-transform:uppercase;color:var(--stone);margin-bottom:clamp(12px,2vh,20px)}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(38px,6.6vw,96px);line-height:1.02;letter-spacing:-.015em;padding-bottom:.1em}
+h1 .red{color:var(--red);font-style:italic}
+.left{display:grid;gap:16px;max-width:52ch}
+.lead{font-size:clamp(13px,1.05vw,16px);line-height:1.55;color:var(--stone);max-width:44ch}
+
+/* ---------- base band ---------- */
+.base{display:flex;align-items:flex-end;justify-content:space-between;gap:clamp(16px,3vw,40px);padding-top:16px;border-top:var(--hair)}
+.acts{display:flex;gap:10px;flex-wrap:wrap}
+.btn{position:relative;overflow:hidden;border-radius:100px;border:var(--hair);padding:14px 26px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--ink);background:var(--paper-lt);isolation:isolate}
+.btn::before{content:"";position:absolute;inset:0;background:var(--sand);transform:translateY(101%);transition:transform .45s var(--ease);z-index:-1}
+.btn:hover::before{transform:translateY(0)}
+.btn.-solid{background:var(--red);color:var(--paper-lt);border-color:transparent}
+.btn.-solid::before{background:#14130f}
+.facts{display:flex;gap:clamp(16px,2.6vw,40px);flex-wrap:wrap;justify-content:flex-end;text-align:right}
+.fact{max-width:20ch}
+.fact b{display:block;font-family:var(--serif);font-size:clamp(20px,2vw,28px);font-weight:400;line-height:1}
+.fact span{display:block;margin-top:5px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--stone)}
+
+/* ---------- the invitation ---------- */
+.hint{position:absolute;left:50%;bottom:clamp(92px,13vh,148px);transform:translateX(-50%);display:flex;align-items:center;gap:9px;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--stone);transition:opacity .6s var(--ease)}
+.hint.-gone{opacity:0}
+.hint i{width:26px;height:26px;border:var(--hair);border-radius:50%;display:grid;place-items:center;animation:sway 2.6s var(--ease) infinite}
+.hint i::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--red)}
+@keyframes sway{0%,100%{transform:translateX(-7px)}50%{transform:translateX(7px)}}
+.meter{position:absolute;right:clamp(16px,3vw,40px);top:50%;transform:translateY(-50%);width:2px;height:120px;background:rgba(20,19,15,.12);border-radius:2px;overflow:hidden}
+.meter i{position:absolute;left:0;right:0;bottom:0;background:var(--red);height:0%;transition:height .25s linear}
+
+/* ---------- loader ---------- */
+.curtain{position:fixed;inset:0;z-index:9;background:var(--paper);display:grid;place-items:center;text-align:center;transition:transform 1.05s var(--ease);will-change:transform}
+.curtain.-out{transform:translateY(-100%)}
+.curtain .cm{font-family:var(--serif);font-size:clamp(34px,6vw,74px);font-weight:300;letter-spacing:.02em}
+.curtain .cb{margin:22px auto 0;width:min(260px,52vw);height:2px;background:rgba(20,19,15,.14);overflow:hidden}
+.curtain .cb i{display:block;height:100%;width:0%;background:var(--red)}
+.curtain .cn{margin-top:12px;font-size:10px;font-weight:800;letter-spacing:.26em;color:var(--stone)}
+
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(14px);filter:blur(7px)}
+.ready .rv{opacity:1;transform:none;filter:blur(0);transition:opacity .7s var(--ease),transform 1s var(--ease),filter .9s var(--ease)}
+.ready .mast{transition-delay:.05s}
+.ready .kicker{transition-delay:.12s}
+.ready .lead{transition-delay:.62s}
+.ready .base{transition-delay:.74s}
+.ready .hint{transition-delay:1.05s}
+.w{display:inline-block;opacity:0;transform:translateY(.42em);filter:blur(6px)}
+.ready .w{opacity:1;transform:none;filter:blur(0);transition:opacity .5s var(--ease),transform .9s var(--ease),filter .7s var(--ease)}
+
+@media (max-width:860px){
+  .nav,.mast-right .chip + .chip{display:none}
+  .centre{top:15vh}
+  .base{flex-direction:column;align-items:stretch;gap:18px}
+  .hero{padding-bottom:0}
+  .base{background:linear-gradient(to bottom,rgba(237,234,226,0),rgba(237,234,226,.94) 14%,var(--paper) 100%);margin:0 calc(-1 * clamp(16px,3vw,40px));padding:26px clamp(16px,3vw,40px) clamp(16px,2.2vw,28px);border-top-color:transparent}
+  .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:left}
+  .fact b{font-size:17px}
+  .fact span{font-size:9px;letter-spacing:.1em}
+  .meter,.hint{display:none}
+  .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn{padding:14px 10px;text-align:center;font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){
+  .rv,.w{opacity:1!important;transform:none!important;filter:none!important}
+  .hint i{animation:none}
+}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+
+<section class="hero">
+  <header class="mast rv">
+    <div class="mark"><b>Flora</b><sup>MINSK</sup></div>
+    <nav class="nav">
+      <a href="#">Каталог</a><a href="#">Подписка</a><a href="#">Свадьбы</a><a href="#">О студии</a>
+    </nav>
+    <div class="mast-right">
+      <span class="chip">Минск</span>
+      <span class="chip">+375 29 000-00-00</span>
+    </div>
+  </header>
+
+  <div class="centre">
+    <p class="kicker rv">Цветочная студия · доставка за 2 часа</p>
+    <h1 id="h1"></h1>
+  </div>
+
+  <div class="hint" id="hint"><i></i>Двигайте курсором</div>
+  <div class="meter"><i id="meterFill"></i></div>
+
+  <footer class="base rv">
+    <div class="left">
+      <p class="lead" data-touch="Проведите пальцем по экрану, и он распустится. Ровно так же он раскроется у неё дома: собираем в день доставки, из цветов, которые пришли утром">Поведите курсором, и он распустится. Ровно так же он раскроется у неё дома: собираем в день доставки, из цветов, которые пришли утром</p>
+      <div class="acts">
+        <a class="btn -solid" href="#">Выбрать букет</a>
+        <a class="btn" href="#">Собрать свой</a>
+      </div>
+    </div>
+    <div class="facts">
+      <div class="fact"><b>2 часа</b><span>доставка по Минску</span></div>
+      <div class="fact"><b>Фото</b><span>букета перед отправкой</span></div>
+      <div class="fact"><b>7 дней</b><span>гарантия свежести</span></div>
+    </div>
+  </footer>
+</section>
+
+<div class="curtain" id="curtain">
+  <div>
+    <div class="cm">Flora</div>
+    <div class="cb"><i id="cbar"></i></div>
+    <div class="cn" id="cnum">00</div>
+  </div>
+</div>
+
+<script type="module">
+import { initBouquet } from '../assets/bouquet-bloom.js'
+
+/* ---- headline split per word: one sweep across two lines ---- */
+const LINES = [
+  [{t:'Букет'},{t:'раскрывается'}],
+  [{t:'от'},{t:'одного'},{t:'движения',red:true}]
+]
+const h1 = document.getElementById('h1')
+let wi = 0
+for (const line of LINES) {
+  const row = document.createElement('div')
+  for (const word of line) {
+    const span = document.createElement('span')
+    span.className = word.red ? 'w red' : 'w'
+    span.style.transitionDelay = (0.3 + wi * 0.075) + 's'
+    span.textContent = word.t + ' '
+    row.appendChild(span); wi++
+  }
+  h1.appendChild(row)
+}
+
+/* ---- the bouquet ---- */
+let sceneReady = false
+const bouquet = initBouquet(document.getElementById('scene'), {
+  lookY: 0.90, camDist: 7.5, camHeight: 0.10,   // the copy owns the top third, the bouquet the bottom two
+  onReady(){ sceneReady = true }
+})
+
+/* ---- loader: crawls to a ceiling, runs home once the scene has DRAWN a frame ---- */
+const MIN_VISIBLE = 1100, HARD_CAP = 5200
+const t0 = performance.now()
+let v = 0, last = t0, done = false
+const bar = document.getElementById('cbar'), num = document.getElementById('cnum')
+const curtain = document.getElementById('curtain')
+function tick(now){
+  const dt = Math.min((now - last) / 1000, 0.05); last = now
+  const ready = sceneReady && (now - t0) > MIN_VISIBLE
+  if (ready && v >= 99.4) v = 100
+  else { const ceil = ready ? 100 : 92; v += (ceil - v) * (ready ? 6 : 1.7) * dt }
+  bar.style.width = v + '%'
+  num.textContent = String(Math.round(v)).padStart(2, '0')
+  if (v >= 99.9 || now - t0 > HARD_CAP) { if (!done) finish() } else requestAnimationFrame(tick)
+}
+function finish(){
+  done = true
+  bar.style.width = '100%'; num.textContent = '100'
+  curtain.classList.add('-out')
+  document.body.classList.add('ready')   // the copy arrives THROUGH the departing curtain
+  setTimeout(() => curtain.remove(), 1300)
+}
+requestAnimationFrame(tick)
+
+/* ---- the invitation goes once the hand starts working ---- */
+if (matchMedia('(hover: none)').matches)
+  document.querySelectorAll('[data-touch]').forEach(el => { el.textContent = el.dataset.touch })
+const hint = document.getElementById('hint'), fill = document.getElementById('meterFill')
+let moves = 0
+addEventListener('pointermove', () => { if (++moves > 12) hint.classList.add('-gone') }, { passive: true })
+setInterval(() => { fill.style.height = Math.round(bouquet.openness * 100) + '%' }, 120)
+</script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+{
+  "project": "Первый экран цветочного магазина – три WOW-варианта",
+  "mode": "build-site (unique, hero only)",
+  "target": "other (статические HTML-прототипы)",
+  "brief": {
+    "pitch": "Клиент: «это аля как стандартный цветочный выглядит, а хочется что-то необычное». Идея клиента: букет распускается при движении курсора",
+    "reference": "https://flowwow.by/minsk/all-products/ – образец «как у всех», не сайт клиента",
+    "audience": "покупатель букета в Минске, часто с телефона, повод день рождения / без повода",
+    "axes": {
+      "dimensionality": "3d (A) · flat (B, C)",
+      "mood": "luxe / organic",
+      "tone": "light",
+      "motionEnergy": "subtle страница + один intense момент на первом экране",
+      "density": "sparse (A, C) · balanced (B)"
+    },
+    "constraints": [
+      "шрифты только с кириллицей",
+      "первый экран должен остаться торговым: поиск / CTA / доставка",
+      "названия, телефоны, цены и фото – заглушки"
+    ]
+  },
+
+  "style": {
+    "committed": "halden-style",
+    "why": "тёплая бумага вместо белого, один фирменный красный, который тратится на плоскости, а не на кнопки, каталожная подача под фотографию товара",
+    "tokens": {
+      "gl-bg": "#edeae2",
+      "gl-surface": "#f4f2ed",
+      "gl-line": "#d8d3c0",
+      "gl-ink": "#14130f",
+      "gl-ink-muted": "#6e6a60",
+      "gl-accent": "#c40f2e",
+      "gl-radius": "2px (изображения) / 100px (пилюли)",
+      "gl-border": "0.6px"
+    },
+    "retype": {
+      "reason": "Instrument Serif и Bebas Neue из Halden без кириллицы",
+      "display": "Cormorant (антиква, только заголовки)",
+      "body": "Manrope (текст, лейблы, 800 в капсе вместо Bebas)"
+    }
+  },
+
+  "variants": {
+    "a": {
+      "title": "Букет распускается",
+      "composition": "halcyon-hero",
+      "scene": {
+        "id": "bouquet-bloom",
+        "origin": "scene-lab (оригинальная сцена, не из каталога)",
+        "references": ["tree-of-life", "filament-star", "glass-halo"],
+        "file": "assets/bouquet-bloom.js + assets/scene-bouquet.html",
+        "driver": "pointer travel (открытие) с затуханием при остановке",
+        "cost": "medium (three.js, instanced petals, без постобработки)",
+        "config": "весь арт-дирекшн в CONFIG, цвета '#rrggbb'"
+      },
+      "notes": "лепестки раскрываются слоями, головки едут от бутона к куполу, стебли веером, лёгкий наклон к курсору; на тач-устройствах раскрывается сам"
+    },
+    "b": {
+      "title": "Акварельное полотно",
+      "composition": "forma-hero",
+      "gradient": {
+        "id": "dilute",
+        "file": "assets/gl/dilute.html",
+        "tint": "Halden: bgColor #edeae2, colorA #e3ded1, colorB #c40f2e, colorC #d8d3c0, colorD #f7f4ee",
+        "tuned": "baseAmount 0.26, dyeScale 1.9, contrast 1.02, pointerStrength 0.78 – мягче акварели, курсор как пипетка",
+        "preserve": "motion (flow, curl, churn) не трогали",
+        "embed": "iframe + postMessage {gl:1,type:'card'} и {gl:1,type:'aim',x,y}"
+      },
+      "notes": "самый торговый вариант: заголовок, строка поиска, три карточки 350:350:640"
+    },
+    "c": {
+      "title": "Витрина-цветок",
+      "composition": "stackside-hero",
+      "scene": null,
+      "notes": "розетка из 15 фото каталога, лепестки раскрываются от движения курсора и набирают цвет; без WebGL, только CSS-трансформы; фото Unsplash в assets/img"
+    }
+  },
+
+  "revealChoreography": {
+    "loader": "честный счётчик с потолком 92% до первого отрисованного кадра (A), загрузки полотна (B), первых восьми фото (C); MIN_VISIBLE 0.9–1.1 c, жёсткий потолок 4.2–5.2 c",
+    "gate": "флипается в начале ухода шторки – контент приезжает сквозь неё",
+    "content": "по словам в заголовке (A) и блоками со стаггером 0.08–0.12 c",
+    "reducedMotion": "сцена и розетка сразу в раскрытом состоянии, появления без смещения"
+  },
+
+  "open": [
+    "бренд, тексты, цены и телефон – заглушки, ждём реальные",
+    "фото в варианте C заменить на фото клиента",
+    "после выбора варианта – собрать остальную страницу в этом же стиле"
+  ]
+}

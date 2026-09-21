@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Первый экран – три WOW-варианта</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#edeae2;--paper-lt:#f4f2ed;--sand:#d8d3c0;--ink:#14130f;--stone:#6e6a60;--red:#c40f2e;
+  --hair:.6px solid rgba(20,19,15,.18);--serif:'Cormorant',Georgia,serif;--sans:'Manrope',system-ui,sans-serif;
+  --ease:cubic-bezier(.22,.7,.2,1)}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1320px;margin:0 auto;padding:clamp(24px,4vw,64px) clamp(16px,4vw,48px)}
+header{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;padding-bottom:22px;border-bottom:var(--hair)}
+.mark{font-family:var(--serif);font-size:26px;font-weight:500;line-height:1}
+.mark sup{font-family:var(--sans);font-size:9px;font-weight:800;letter-spacing:.16em;color:var(--stone);vertical-align:super}
+header span{font-size:12px;color:var(--stone)}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(32px,5vw,64px);line-height:1.02;letter-spacing:-.015em;margin:36px 0 14px;max-width:20ch}
+h1 em{font-style:italic;color:var(--red)}
+.lead{color:var(--stone);font-size:16px;max-width:66ch}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
+.card{display:flex;flex-direction:column;border:var(--hair);border-radius:2px;background:var(--paper-lt);color:inherit;text-decoration:none;overflow:hidden;transition:transform .5s var(--ease),border-color .3s var(--ease)}
+.card:hover{transform:translateY(-5px);border-color:var(--red)}
+.card figure{aspect-ratio:16/10;overflow:hidden;background:var(--sand);border-bottom:var(--hair)}
+.card img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.card .body{padding:20px;display:grid;gap:9px;align-content:start;flex:1}
+.tag{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--red)}
+h2{font-family:var(--serif);font-size:27px;font-weight:400;line-height:1.1}
+.card p{color:var(--stone);font-size:14px}
+.mech{font-size:12px;color:var(--ink);border-top:var(--hair);padding-top:10px;margin-top:4px}
+.mech b{font-weight:800}
+.go{margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--red)}
+.note{margin-top:34px;padding-top:20px;border-top:var(--hair);color:var(--stone);font-size:13px;max-width:78ch}
+.note b{color:var(--ink)}
+.note ul{margin:10px 0 0 18px;display:grid;gap:5px}
+@media (max-width:980px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark">Flora<sup>MINSK</sup></div>
+    <span>Прототипы первого экрана · сентябрь 2026</span>
+  </header>
+
+  <h1>Первый экран, который <em>раскрывается</em></h1>
+  <p class="lead">Три варианта WOW-первого экрана для цветочного магазина. Основная идея клиента – букет распускается при движении курсора – разобрана тремя разными способами: как живая 3D-сцена, как акварельное полотно и как витрина-цветок из реальных фото каталога. Единый стиль во всех трёх: тёплая бумага, один фирменный красный, антиква в заголовках</p>
+
+  <div class="grid">
+    <a class="card" href="a/">
+      <figure><img src="assets/previews/a.jpg" alt="Вариант A"></figure>
+      <div class="body">
+        <span class="tag">Вариант A · идея клиента</span>
+        <h2>Букет распускается</h2>
+        <p>Живой 3D-букет в центре экрана. Стоит закрытым бутоном, распускается ровно настолько, насколько вы подвигали курсором, и медленно складывается обратно, если остановиться</p>
+        <div class="mech"><b>Механика:</b> собственная 3D-сцена, лепестки раскрываются слоями, букет тянется к курсору</div>
+        <span class="go">Открыть →</span>
+      </div>
+    </a>
+
+    <a class="card" href="b/">
+      <figure><img src="assets/previews/b.jpg" alt="Вариант B"></figure>
+      <div class="body">
+        <span class="tag">Вариант B · для каталога</span>
+        <h2>Акварельное полотно</h2>
+        <p>Первый экран остаётся рабочим: заголовок, поиск и карточки на месте. WOW – в полотне между ними: курсор работает как пипетка, краска расходится по воде и продолжает жить после того, как руку убрали</p>
+        <div class="mech"><b>Механика:</b> шейдер-градиент, реагирует на курсор, не грузит страницу видео</div>
+        <span class="go">Открыть →</span>
+      </div>
+    </a>
+
+    <a class="card" href="c/">
+      <figure><img src="assets/previews/c.jpg" alt="Вариант C"></figure>
+      <div class="body">
+        <span class="tag">Вариант C · из фото товара</span>
+        <h2>Витрина-цветок</h2>
+        <p>Каталог сложен в один цветок: каждый лепесток – реальное фото букета. Витрина раскрывается от движения курсора, фото набирают цвет, при наведении лепесток называет букет и цену</p>
+        <div class="mech"><b>Механика:</b> без 3D, только CSS и фото – самый лёгкий и самый «товарный» вариант</div>
+        <span class="go">Открыть →</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="note">
+    <b>Что здесь условное</b>
+    <ul>
+      <li>Название Flora, телефон, тексты и цены – заглушки под реальный бренд и каталог</li>
+      <li>Фото букетов в варианте C – со стока, заменяются на фото клиента</li>
+      <li>Цифры «2 часа», «7 дней», «4,9» – примеры формулировок, ставим только те, что клиент готов подтвердить</li>
+      <li>Показан только первый экран, остальная страница – следующий шаг после выбора варианта</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

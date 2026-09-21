@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Вариант B – Акварельное полотно</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#edeae2;--paper-lt:#f4f2ed;--sand:#d8d3c0;--ink:#14130f;--stone:#6e6a60;--red:#c40f2e;
+  --hair:.6px solid rgba(20,19,15,.18);
+  --serif:'Cormorant',Georgia,serif;--sans:'Manrope',system-ui,sans-serif;
+  --ease:cubic-bezier(.22,.7,.2,1);
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
+
+/* one screen inside a hairline gutter */
+.frame{height:100vh;padding:clamp(12px,1.6vw,20px);display:flex;flex-direction:column}
+.inner{flex:1;min-height:0;border:var(--hair);border-radius:2px;display:flex;flex-direction:column;overflow:hidden;background:var(--paper)}
+
+/* ---- masthead rail ---- */
+.rail{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px clamp(14px,2vw,24px);border-bottom:var(--hair)}
+.mark{font-family:var(--serif);font-size:24px;font-weight:500;line-height:1}
+.mark sup{font-family:var(--sans);font-size:9px;font-weight:800;letter-spacing:.16em;color:var(--stone);vertical-align:super}
+.nav{display:flex;gap:clamp(12px,1.8vw,26px);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.nav a{color:var(--ink);text-decoration:none;position:relative;padding:3px 1px}
+.nav a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--red);transform:scaleX(0);transform-origin:left;transition:transform .4s var(--ease)}
+.nav a:hover::after{transform:scaleX(1)}
+.rail-r{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--stone);display:flex;gap:12px;align-items:center}
+.pill{border:var(--hair);border-radius:100px;padding:7px 14px;color:var(--ink)}
+
+/* ---- headline beside the one-row form ---- */
+.head{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:clamp(16px,3vw,48px);align-items:end;padding:clamp(18px,3.2vh,40px) clamp(14px,2vw,24px) clamp(16px,2.4vh,28px)}
+.kicker{font-size:11px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;color:var(--stone);margin-bottom:12px}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(34px,4.4vw,66px);line-height:1;letter-spacing:-.015em}
+h1 em{font-style:italic;color:var(--red)}
+.form{display:flex;gap:8px;align-items:stretch}
+.form input{flex:1;min-width:0;border:var(--hair);border-radius:100px;background:var(--paper-lt);padding:15px 20px;font:inherit;font-size:14px;color:var(--ink)}
+.form input::placeholder{color:var(--stone)}
+.form input:focus{outline:none;border-color:var(--red)}
+.btn{position:relative;overflow:hidden;border:var(--hair);border-radius:100px;padding:15px 26px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:var(--paper-lt);color:var(--ink);text-decoration:none;cursor:pointer;isolation:isolate;white-space:nowrap}
+.btn::before{content:"";position:absolute;inset:0;background:var(--sand);transform:translateY(101%);transition:transform .45s var(--ease);z-index:-1}
+.btn:hover::before{transform:translateY(0)}
+.btn.-solid{background:var(--red);color:var(--paper-lt);border-color:transparent}
+.btn.-solid::before{background:var(--ink)}
+.subline{margin-top:10px;font-size:12px;color:var(--stone)}
+
+/* ---- the band: a wet sheet the cursor paints on ---- */
+.band{position:relative;flex:1;min-height:0;margin:0 clamp(14px,2vw,24px);border:var(--hair);border-radius:2px;overflow:hidden;background:var(--paper-lt)}
+.band iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
+.band .veil{position:absolute;inset:0;background:radial-gradient(118% 92% at 50% 42%,rgba(237,234,226,.16) 38%,rgba(237,234,226,.62) 100%)}
+.band .cap{position:absolute;left:clamp(14px,2vw,26px);bottom:clamp(12px,2vh,20px);font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--stone);display:flex;align-items:center;gap:9px;transition:opacity .6s var(--ease)}
+.band .cap.-gone{opacity:0}
+.band .cap i{width:24px;height:24px;border:var(--hair);border-radius:50%;display:grid;place-items:center;background:rgba(244,242,237,.7)}
+.band .cap i::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--red);animation:pulse 2.2s var(--ease) infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(2.2);opacity:.35}}
+.band .stamp{position:absolute;right:clamp(14px,2vw,26px);top:clamp(12px,2vh,20px);text-align:right;font-family:var(--serif);font-size:clamp(18px,2vw,26px);color:var(--ink);background:var(--paper-lt);border:var(--hair);border-radius:2px;padding:10px 14px}
+.band .stamp span{display:block;font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--stone);margin-top:4px}
+
+/* ---- base row: 350 : 350 : 640 ---- */
+.cards{display:grid;grid-template-columns:350fr 350fr 640fr;gap:clamp(8px,1vw,14px);padding:clamp(10px,1.6vh,16px) clamp(14px,2vw,24px) clamp(12px,1.8vh,18px)}
+.card{position:relative;overflow:hidden;border:var(--hair);border-radius:2px;padding:14px 16px;background:var(--paper-lt);display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-height:104px;text-decoration:none;color:inherit;isolation:isolate}
+.card::before{content:"";position:absolute;inset:0;background:var(--red);transform:translateX(-101%);transition:transform .55s var(--ease);z-index:-1}
+.card:hover::before{transform:translateX(0)}
+.card:hover,.card:hover .c-note,.card:hover .c-price{color:var(--paper-lt)}
+.card:hover .c-price b{color:var(--paper-lt)}
+.c-note{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--stone);transition:color .4s var(--ease)}
+.c-title{font-family:var(--serif);font-size:clamp(19px,1.8vw,26px);font-weight:400;line-height:1.1}
+.c-price{font-size:12px;color:var(--stone);transition:color .4s var(--ease)}
+.c-price b{font-weight:800;color:var(--ink);transition:color .4s var(--ease)}
+.card.-wide{flex-direction:row;align-items:flex-end;justify-content:space-between;gap:20px}
+.card.-wide .list{display:flex;gap:clamp(14px,1.8vw,26px);flex-wrap:wrap;flex:1}
+.card.-wide .list div b{display:block;font-family:var(--serif);font-size:clamp(17px,1.6vw,23px);font-weight:400;line-height:1}
+.card.-wide .list div span{display:block;margin-top:4px;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--stone);transition:color .4s var(--ease)}
+.card.-wide:hover .list div span{color:rgba(244,242,237,.8)}
+
+/* ---- loader + reveal ---- */
+.curtain{position:fixed;inset:0;z-index:9;background:var(--paper);display:grid;place-items:center;text-align:center;transition:transform 1s var(--ease)}
+.curtain.-out{transform:translateY(-100%)}
+.curtain .cm{font-family:var(--serif);font-size:clamp(34px,6vw,74px);font-weight:300}
+.curtain .cb{margin:22px auto 0;width:min(260px,52vw);height:2px;background:rgba(20,19,15,.14);overflow:hidden}
+.curtain .cb i{display:block;height:100%;width:0%;background:var(--red)}
+.rv{opacity:0;transform:translateY(14px);filter:blur(7px)}
+.ready .rv{opacity:1;transform:none;filter:blur(0);transition:opacity .7s var(--ease),transform 1s var(--ease),filter .9s var(--ease)}
+.ready .rail{transition-delay:.05s}
+.ready .head{transition-delay:.16s}
+.ready .band{transition-delay:.3s}
+.ready .cards .card:nth-child(1){transition-delay:.5s}
+.ready .cards .card:nth-child(2){transition-delay:.58s}
+.ready .cards .card:nth-child(3){transition-delay:.66s}
+
+@media (max-width:900px){
+  body{overflow:auto}
+  .frame{height:auto;min-height:100vh}
+  .nav,.rail-r .pill + .pill{display:none}
+  .head{grid-template-columns:1fr;align-items:start;gap:18px}
+  .band{min-height:38vh}
+  .cards{grid-template-columns:1fr}
+  .band .stamp{font-size:15px;padding:7px 10px}
+  .band .stamp span{display:none}
+  .band .cap{font-size:10px;letter-spacing:.12em}
+  .card.-wide{flex-direction:column;align-items:flex-start}
+}
+@media (prefers-reduced-motion:reduce){.rv{opacity:1!important;transform:none!important;filter:none!important}}
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <div class="inner">
+
+    <header class="rail rv">
+      <div class="mark">Flora<sup>MINSK</sup></div>
+      <nav class="nav"><a href="#">Каталог</a><a href="#">Монобукеты</a><a href="#">Авторские</a><a href="#">Подписка</a><a href="#">Доставка</a></nav>
+      <div class="rail-r"><span class="pill">Минск</span><span class="pill">Сегодня до 21:00</span></div>
+    </header>
+
+    <div class="head rv">
+      <div>
+        <p class="kicker">Цветочная студия · собираем утром</p>
+        <h1>Цветы в тот же день<br>и букет, который <em>помнят</em></h1>
+      </div>
+      <div>
+        <form class="form" onsubmit="return false">
+          <input type="text" placeholder="Розы, пионы, авторский букет" aria-label="Поиск букета">
+          <button class="btn -solid" type="submit">Найти</button>
+        </form>
+        <p class="subline">Более 200 букетов в наличии · доставка от 60 минут · фото перед отправкой</p>
+      </div>
+    </div>
+
+    <div class="band rv" id="band">
+      <iframe id="gl" src="../assets/gl/dilute.html" title="Акварельное полотно" loading="eager" tabindex="-1"></iframe>
+      <div class="veil"></div>
+      <div class="stamp">Акварель дня<span>полотно реагирует на курсор</span></div>
+      <div class="cap" id="cap"><i></i><span data-touch="Проведите пальцем по полотну">Проведите курсором по полотну</span></div>
+    </div>
+
+    <div class="cards">
+      <a class="card rv" href="#">
+        <span class="c-note">Монобукеты</span>
+        <span class="c-title">15 красных роз</span>
+        <span class="c-price">от <b>46 Br</b></span>
+      </a>
+      <a class="card rv" href="#">
+        <span class="c-note">Авторские</span>
+        <span class="c-title">Пионовидные с эвкалиптом</span>
+        <span class="c-price">от <b>89 Br</b></span>
+      </a>
+      <a class="card -wide rv" href="#">
+        <div class="list">
+          <div><b>2 часа</b><span>доставка</span></div>
+          <div><b>Фото</b><span>перед отправкой</span></div>
+          <div><b>7 дней</b><span>свежесть</span></div>
+        </div>
+        <span class="c-note" style="white-space:nowrap">Смотреть каталог →</span>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<div class="curtain" id="curtain">
+  <div><div class="cm">Flora</div><div class="cb"><i id="cbar"></i></div></div>
+</div>
+
+<script>
+/* the gradient is a card here: no panel, no second curtain of its own */
+const gl = document.getElementById('gl')
+let glReady = false
+gl.addEventListener('load', () => {
+  glReady = true
+  gl.contentWindow.postMessage({ gl: 1, type: 'card' }, '*')
+})
+
+/* the sheet cannot take the cursor without stealing the clicks,
+   so the page posts the position in as the move it would have been */
+if (matchMedia('(hover: none)').matches)
+  document.querySelectorAll('[data-touch]').forEach(el => { el.textContent = el.dataset.touch })
+const band = document.getElementById('band'), cap = document.getElementById('cap')
+let moves = 0
+band.addEventListener('pointermove', e => {
+  if (!glReady) return
+  const r = band.getBoundingClientRect()
+  gl.contentWindow.postMessage({ gl: 1, type: 'aim', x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }, '*')
+  if (++moves > 10) cap.classList.add('-gone')
+}, { passive: true })
+
+/* loader: held by the sheet's first paint, capped so it can never trap anyone */
+const MIN_VISIBLE = 900, HARD_CAP = 4200
+const t0 = performance.now(); let v = 0, last = t0, done = false
+const bar = document.getElementById('cbar'), curtain = document.getElementById('curtain')
+function tick(now){
+  const dt = Math.min((now - last) / 1000, .05); last = now
+  const ready = glReady && (now - t0) > MIN_VISIBLE
+  if (ready && v >= 99.4) v = 100
+  else { const ceil = ready ? 100 : 92; v += (ceil - v) * (ready ? 6 : 1.8) * dt }
+  bar.style.width = v + '%'
+  if (v >= 99.9 || now - t0 > HARD_CAP) { if (!done) finish() } else requestAnimationFrame(tick)
+}
+function finish(){
+  done = true; bar.style.width = '100%'
+  curtain.classList.add('-out')
+  document.body.classList.add('ready')
+  setTimeout(() => curtain.remove(), 1200)
+}
+requestAnimationFrame(tick)
+</script>
+</body>
+</html>

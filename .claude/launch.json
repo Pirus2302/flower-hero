@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "flowwow-hero",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3141", "--directory", "D:/MYDEV/flowwow-hero"],
+      "port": 3141
+    }
+  ]
+}

@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gradient · Dilute</title>
+<style>
+  :root { color-scheme: dark }
+  html, body { margin: 0; height: 100%; background: #070810; overflow: hidden }
+  #gl { display: block; width: 100vw; height: 100vh }
+  #fade { position: fixed; inset: 0; background: #070810; pointer-events: none; opacity: 1; transition: opacity 1.1s ease }
+
+  /* ====== UI PANEL (copy-paste identical across gradients) ====== */
+  #ui-panel { position: fixed; top: 12px; right: 12px; width: 286px; max-height: calc(100vh - 24px); overflow: auto;
+    font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: #dde3ee; z-index: 10;
+    background: rgba(9, 11, 17, .78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,.10); border-radius: 12px; padding: 10px 12px 12px }
+  #ui-panel.closed > *:not(#ui-head) { display: none }
+  #ui-head { display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 8px }
+  #ui-head b { font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 10px; opacity: .8 }
+  #ui-fps { opacity: .55; font-variant-numeric: tabular-nums }
+  .ui-sec { margin: 10px 0 4px; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; opacity: .42 }
+  .ui-row { display: grid; grid-template-columns: 96px 1fr 42px; align-items: center; gap: 6px; margin: 3px 0 }
+  .ui-row label { opacity: .72; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .ui-row input[type=range] { width: 100%; accent-color: #7f9cff; height: 14px }
+  .ui-row input[type=color] { width: 100%; height: 18px; padding: 0; border: 0; background: none; border-radius: 4px }
+  .ui-row span { text-align: right; opacity: .55; font-variant-numeric: tabular-nums }
+  #ui-preset optgroup { background: #0b0d13; color: #9aa4b8; font-style: normal }
+  #ui-preset option { background: #0b0d13; color: #dde3ee }
+  #ui-preset { width: 100%; margin-bottom: 4px; background: rgba(255,255,255,.06); color: #dde3ee;
+    border: 1px solid rgba(255,255,255,.12); border-radius: 6px; padding: 4px 6px; font: inherit }
+  .ui-btns { display: flex; gap: 6px; margin-top: 10px }
+  .ui-btns button { flex: 1; cursor: pointer; background: rgba(255,255,255,.06); color: #dde3ee;
+    border: 1px solid rgba(255,255,255,.12); border-radius: 6px; padding: 5px 0; font: inherit }
+  .ui-btns button:hover { background: rgba(255,255,255,.12) }
+  #ui-rnd-all { width: 100%; margin-top: 6px; cursor: pointer; font: inherit; color: #dde3ee;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 6px; padding: 6px 0 }
+  #ui-rnd-all:hover { background: rgba(255,255,255,.13) }
+  #ui-save { width: 100%; margin-top: 6px; cursor: pointer; font: inherit; color: #dde3ee;
+    background: rgba(127,156,255,.16); border: 1px solid rgba(127,156,255,.44); border-radius: 6px; padding: 6px 0 }
+  #ui-save:hover { background: rgba(127,156,255,.3) }
+  /* ---- the group: the rolls of this gradient that were worth keeping. They are written
+     into the JSON block below the panel, so the file carries its own variants. */
+  #ui-add-group { width: 100%; margin-top: 6px; cursor: pointer; font: inherit; color: #dde3ee;
+    background: rgba(255,255,255,.05); border: 1px dashed rgba(255,255,255,.24); border-radius: 6px; padding: 6px 0 }
+  #ui-add-group:hover { background: rgba(255,255,255,.12) }
+  .ui-grp { margin-top: 10px }
+  .ui-grp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 5px;
+    font-size: 9px; letter-spacing: .12em; text-transform: uppercase; opacity: .42 }
+  .ui-grp-head em { font-style: normal; letter-spacing: .04em; text-transform: none }
+  .ui-grp-list { display: flex; flex-wrap: wrap; gap: 4px }
+  .ui-grp-list:empty::after { content: 'no variants yet'; font-size: 10px; opacity: .34 }
+  .ui-var { width: 44px; height: 24px; padding: 0; cursor: pointer; font: inherit; font-size: 9px;
+    color: rgba(255,255,255,.9); text-shadow: 0 1px 2px rgba(0,0,0,.75); background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.16); border-radius: 5px }
+  .ui-var:hover { border-color: rgba(255,255,255,.55) }
+  /* the one whose values are the live ones — moving any slider puts it out */
+  .ui-var.on { border-color: rgba(127,156,255,.95); box-shadow: 0 0 0 1px rgba(127,156,255,.45) }
+  #ui-note { margin-top: 6px; min-height: 14px; font-size: 10px; line-height: 1.4; opacity: .62 }
+  #ui-snapshot { margin: 8px 0 0; padding: 8px; max-height: 168px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+    background: rgba(0,0,0,.35); border-radius: 6px; font-size: 10px; line-height: 1.45; opacity: .72 }
+</style>
+<style>[id^="ui-"]{display:none!important}</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="fade"></div>
+
+<div id="ui-panel">
+  <div id="ui-head"><b>Dilute</b><span id="ui-fps">— fps</span></div>
+  <select id="ui-preset"></select>
+  <div id="ui-rows"></div>
+  <div class="ui-btns">
+    <button id="ui-reload">⟳ reload</button>
+    <button id="ui-reset">↺ reset</button>
+    <button id="ui-copy">⧉ copy</button>
+  </div>
+  <div class="ui-btns">
+    <button id="ui-rnd-color">&#8258; colour</button>
+    <button id="ui-rnd-pointer">&#8258; cursor</button>
+  </div>
+  <div class="ui-btns">
+    <button id="ui-rnd-motion">&#8258; motion</button>
+    <button id="ui-rnd-tone">&#8258; tone</button>
+  </div>
+  <button id="ui-rnd-all">&#8258; randomise everything</button>
+  <button id="ui-save">&#10515; save as default</button>
+  <div class="ui-grp">
+    <div class="ui-grp-head"><span>group <em id="ui-grp-n">0</em></span><em>click wear · alt drop</em></div>
+    <div id="ui-grp-list" class="ui-grp-list"></div>
+    <button id="ui-add-group">&#43; add this to the group</button>
+  </div>
+  <div id="ui-note"></div>
+  <pre id="ui-snapshot"></pre>
+</div>
+
+<!-- ====== GROUP ======
+     The variants of this gradient: every roll that was worth keeping, as the full
+     CONFIG it takes to wear it again. The panel's ＋ button adds one and the dev
+     server writes it back in here, so the file exports carrying its own group.
+     Hand-editable — name a variant whatever you like. -->
+<script type="application/json" id="ui-group">
+{ "slug": "04-dilute",
+  "variants": [
+    {"name":"Dilute#001","added":"2026-08-19","config":{"bgColor":"#e7e9e8","colorA":"#c6cdca","colorB":"#a4b2ad","colorC":"#849591","colorD":"#677573","scale":4.41,"speed":0.33,"flow":0.43,"curl":1.74,"curlScale":1.65,"churn":1,"dyeScale":3.03,"baseAmount":0.29,"roughness":0.74,"lacunarity":1.54,"edge":0.52,"edgeSoft":0.48,"edgeGain":0.38,"contrast":2.07,"midpoint":0.55,"glow":1.07,"sink":0.16,"grain":0,"dither":0.38,"vignette":0.15,"pointerRadius":0.85,"pointerStrength":0.94,"smear":1.99,"parallax":0.0083,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#002","added":"2026-08-22","config":{"bgColor":"#100a05","colorA":"#241407","colorB":"#5a3312","colorC":"#b57a3a","colorD":"#f2dfc0","scale":0.2,"speed":0.33,"flow":0.065,"curl":0.9,"curlScale":1.55,"churn":0.5,"dyeScale":3.3,"baseAmount":0.55,"roughness":0.42,"lacunarity":1.6,"edge":0.5,"edgeSoft":0.32,"edgeGain":0.35,"contrast":1.5,"midpoint":0.5,"glow":0.25,"sink":0.26,"grain":0,"dither":1.2,"vignette":0.2,"pointerRadius":1.25,"pointerStrength":0.17,"smear":0.75,"parallax":0.002,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#003","added":"2026-08-23","config":{"bgColor":"#110709","colorA":"#270a10","colorB":"#e72348","colorC":"#1a4ac9","colorD":"#faebec","scale":0.2,"speed":0.33,"flow":0.07,"curl":0.58,"curlScale":0.76,"churn":0.4,"dyeScale":1.46,"baseAmount":0.57,"roughness":0.79,"lacunarity":2.71,"edge":0.47,"edgeSoft":0.26,"edgeGain":0.38,"contrast":0.96,"midpoint":0.53,"glow":0.14,"sink":0.19,"grain":0,"grainAnim":0,"dither":1.13,"vignette":0.12,"cursor":1,"pointerRadius":0.88,"pointerStrength":0.72,"smear":0.91,"parallax":0.015,"maxDpr":1}},
+    {"name":"Dilute#004","added":"2026-08-19","config":{"bgColor":"#dbdee2","colorA":"#bcc5cc","colorB":"#9daeb6","colorC":"#80989e","colorD":"#687f82","scale":2.75,"speed":0.33,"flow":0.63,"curl":2.38,"curlScale":0.63,"churn":1,"dyeScale":3.29,"baseAmount":0.9,"roughness":0.35,"lacunarity":1.87,"edge":1.18,"edgeSoft":0.24,"edgeGain":0.66,"contrast":3.14,"midpoint":0.51,"glow":1.01,"sink":0.35,"grain":0,"dither":0.56,"vignette":0.36,"pointerRadius":0.53,"pointerStrength":0.9,"smear":2.2,"parallax":0.0087,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#005","added":"2026-08-23","config":{"bgColor":"#0a0805","colorA":"#201b0e","colorB":"#f1aa0f","colorC":"#2f23c3","colorD":"#faf7eb","scale":0.2,"speed":0.33,"flow":0.05,"curl":0.47,"curlScale":0.83,"churn":0.5,"dyeScale":2.7,"baseAmount":0.55,"roughness":0.47,"lacunarity":1.42,"edge":0.46,"edgeSoft":0.2,"edgeGain":0.34,"contrast":0.84,"midpoint":0.58,"glow":0.13,"sink":0.17,"grain":0,"grainAnim":0,"dither":1.01,"vignette":0.12,"cursor":1,"pointerRadius":0.86,"pointerStrength":0.52,"smear":0.36,"parallax":0.01,"maxDpr":1}},
+    {"name":"Dilute#006","added":"2026-08-23","config":{"bgColor":"#060a11","colorA":"#141b29","colorB":"#8a27e8","colorC":"#2f6beb","colorD":"#efe8f9","scale":0.2,"speed":0.33,"flow":0.055,"curl":0.39,"curlScale":0.97,"churn":0.5,"dyeScale":2.62,"baseAmount":0.44,"roughness":0.48,"lacunarity":2.8,"edge":0.41,"edgeSoft":0.2,"edgeGain":0.32,"contrast":0.97,"midpoint":0.63,"glow":0.14,"sink":0.15,"grain":0,"grainAnim":0,"dither":1.58,"vignette":0.19,"cursor":1,"pointerRadius":1.2,"pointerStrength":0.71,"smear":0.77,"parallax":0.012,"maxDpr":1}},
+    {"name":"Dilute#007","added":"2026-08-23","config":{"bgColor":"#0e060a","colorA":"#1a0d13","colorB":"#f33c9a","colorC":"#1470c5","colorD":"#fcf1f3","scale":0.2,"speed":0.33,"flow":0.05,"curl":0.52,"curlScale":0.68,"churn":0.35,"dyeScale":2.93,"baseAmount":0.5,"roughness":0.65,"lacunarity":1.36,"edge":0.44,"edgeSoft":0.25,"edgeGain":0.31,"contrast":1,"midpoint":0.63,"glow":0.12,"sink":0.16,"grain":0,"grainAnim":0,"dither":1.01,"vignette":0.19,"cursor":1,"pointerRadius":0.9,"pointerStrength":0.6,"smear":0.63,"parallax":0.011,"maxDpr":1}},
+    {"name":"Dilute#008","added":"2026-08-22","config":{"bgColor":"#eef1f8","colorA":"#dfe4f1","colorB":"#b9c3e0","colorC":"#8b98c6","colorD":"#5f6da4","scale":0.2,"speed":0.33,"flow":0.06,"curl":1.05,"curlScale":1.5,"churn":0.4,"dyeScale":2.8,"baseAmount":0.7,"roughness":0.68,"lacunarity":1.9,"edge":0.5,"edgeSoft":0.34,"edgeGain":0.55,"contrast":1.9,"midpoint":0.5,"glow":0.1,"sink":0.18,"grain":0,"dither":1.1,"vignette":0.1,"pointerRadius":1.5,"pointerStrength":0.12,"smear":0.5,"parallax":0.0015,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#009","added":"2026-08-22","config":{"bgColor":"#08110f","colorA":"#10221e","colorB":"#1f4a41","colorC":"#5e9186","colorD":"#d7e6e0","scale":0.2,"speed":0.33,"flow":0.08,"curl":1.1,"curlScale":1.75,"churn":0.4,"dyeScale":2.6,"baseAmount":0.55,"roughness":0.45,"lacunarity":2.05,"edge":0.6,"edgeSoft":0.28,"edgeGain":0.45,"contrast":1.55,"midpoint":0.58,"glow":0.3,"sink":0.24,"grain":0,"dither":1.2,"vignette":0.2,"pointerRadius":1,"pointerStrength":0.2,"smear":1,"parallax":0.003,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#010","added":"2026-08-22","config":{"bgColor":"#0a0713","colorA":"#180f2b","colorB":"#382566","colorC":"#7f68c2","colorD":"#e6dcf7","scale":0.2,"speed":0.33,"flow":0.08,"curl":1.25,"curlScale":2,"churn":0.35,"dyeScale":2.5,"baseAmount":0.58,"roughness":0.48,"lacunarity":2.15,"edge":0.62,"edgeSoft":0.24,"edgeGain":0.48,"contrast":1.6,"midpoint":0.6,"glow":0.28,"sink":0.22,"grain":0,"dither":1.2,"vignette":0.19,"pointerRadius":1.05,"pointerStrength":0.19,"smear":1.1,"parallax":0.003,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#011","added":"2026-08-23","config":{"bgColor":"#f6f4f3","colorA":"#e6dad8","colorB":"#ed5429","colorC":"#3680cc","colorD":"#fffefd","scale":0.2,"speed":0.33,"flow":0.07,"curl":0.43,"curlScale":0.97,"churn":0.5,"dyeScale":1.98,"baseAmount":0.63,"roughness":0.64,"lacunarity":2.71,"edge":0.54,"edgeSoft":0.27,"edgeGain":0.45,"contrast":1.14,"midpoint":0.47,"glow":0.19,"sink":0.19,"grain":0,"grainAnim":0,"dither":1.39,"vignette":0.1,"cursor":1,"pointerRadius":1.17,"pointerStrength":0.47,"smear":0.71,"parallax":0.012,"maxDpr":1}},
+    {"name":"Dilute#012","added":"2026-08-22","config":{"bgColor":"#f2f1ee","colorA":"#e2e0da","colorB":"#c8c5bb","colorC":"#a5a196","colorD":"#7c786c","scale":0.2,"speed":0.33,"flow":0.05,"curl":1.3,"curlScale":1.1,"churn":0.5,"dyeScale":3.2,"baseAmount":0.75,"roughness":0.4,"lacunarity":1.55,"edge":0.55,"edgeSoft":0.3,"edgeGain":0.38,"contrast":1.7,"midpoint":0.5,"glow":0.08,"sink":0.15,"grain":0,"dither":1.05,"vignette":0.09,"pointerRadius":1.7,"pointerStrength":0.11,"smear":0.45,"parallax":0.001,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#013","added":"2026-08-22","config":{"bgColor":"#05080c","colorA":"#0c1520","colorB":"#f03c2e","colorC":"#1fb0c8","colorD":"#ffe9e2","scale":0.2,"speed":0.33,"flow":0.06,"curl":1.2,"curlScale":1.85,"churn":0.4,"dyeScale":2.45,"baseAmount":0.57,"roughness":0.48,"lacunarity":2.1,"edge":0.62,"edgeSoft":0.24,"edgeGain":0.48,"contrast":1.6,"midpoint":0.58,"glow":0.32,"sink":0.22,"grain":0,"dither":1.2,"vignette":0.19,"pointerRadius":1.05,"pointerStrength":0.18,"smear":1.05,"parallax":0.0028,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#014","added":"2026-08-22","config":{"bgColor":"#0a0510","colorA":"#170b20","colorB":"#e2349a","colorC":"#2fb87c","colorD":"#ffe6f5","scale":0.2,"speed":0.33,"flow":0.055,"curl":1.25,"curlScale":1.75,"churn":0.38,"dyeScale":2.6,"baseAmount":0.58,"roughness":0.5,"lacunarity":2.2,"edge":0.6,"edgeSoft":0.26,"edgeGain":0.5,"contrast":1.65,"midpoint":0.57,"glow":0.3,"sink":0.24,"grain":0,"dither":1.2,"vignette":0.2,"pointerRadius":1,"pointerStrength":0.17,"smear":0.95,"parallax":0.0025,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#015","added":"2026-08-22","config":{"bgColor":"#0d0e10","colorA":"#1a1c20","colorB":"#34383f","colorC":"#6f7681","colorD":"#ced3da","scale":0.2,"speed":0.33,"flow":0.07,"curl":0.95,"curlScale":1.2,"churn":0.45,"dyeScale":2.9,"baseAmount":0.68,"roughness":0.52,"lacunarity":2.4,"edge":0.58,"edgeSoft":0.26,"edgeGain":0.5,"contrast":1.35,"midpoint":0.54,"glow":0.12,"sink":0.19,"grain":0,"dither":1.2,"vignette":0.18,"pointerRadius":1.1,"pointerStrength":0.15,"smear":0.8,"parallax":0.0022,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#016","added":"2026-08-22","config":{"bgColor":"#0b0703","colorA":"#22150a","colorB":"#f0ad1e","colorC":"#2b4fbf","colorD":"#fff2d4","scale":0.2,"speed":0.33,"flow":0.05,"curl":0.95,"curlScale":1.5,"churn":0.36,"dyeScale":3.1,"baseAmount":0.62,"roughness":0.44,"lacunarity":1.7,"edge":0.54,"edgeSoft":0.3,"edgeGain":0.4,"contrast":1.55,"midpoint":0.53,"glow":0.26,"sink":0.25,"grain":0,"dither":1.2,"vignette":0.2,"pointerRadius":1.25,"pointerStrength":0.16,"smear":0.8,"parallax":0.002,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#017","added":"2026-08-22","config":{"bgColor":"#06050e","colorA":"#140f26","colorB":"#8a53ec","colorC":"#35cfc4","colorD":"#efe9ff","scale":0.2,"speed":0.33,"flow":0.055,"curl":1.35,"curlScale":1.95,"churn":0.35,"dyeScale":2.55,"baseAmount":0.56,"roughness":0.47,"lacunarity":2.15,"edge":0.63,"edgeSoft":0.25,"edgeGain":0.5,"contrast":1.65,"midpoint":0.59,"glow":0.34,"sink":0.22,"grain":0,"dither":1.2,"vignette":0.19,"pointerRadius":1,"pointerStrength":0.18,"smear":1.1,"parallax":0.003,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#018","added":"2026-08-23","config":{"bgColor":"#0f0712","colorA":"#26162a","colorB":"#c220f4","colorC":"#213ae4","colorD":"#f7eefa","scale":0.2,"speed":0.33,"flow":0.055,"curl":0.62,"curlScale":0.97,"churn":0.4,"dyeScale":1.61,"baseAmount":0.71,"roughness":0.43,"lacunarity":1.94,"edge":0.53,"edgeSoft":0.29,"edgeGain":0.39,"contrast":1.37,"midpoint":0.49,"glow":0.18,"sink":0.23,"grain":0,"grainAnim":0,"dither":1.38,"vignette":0.19,"cursor":1,"pointerRadius":0.97,"pointerStrength":0.27,"smear":0.91,"parallax":0.012,"maxDpr":1}},
+    {"name":"Dilute#019","added":"2026-08-19","config":{"bgColor":"#f6eaf6","colorA":"#e7c0e5","colorB":"#dc92d3","colorC":"#c86db6","colorD":"#af4d95","scale":1.33,"speed":0.33,"flow":0.455,"curl":1.23,"curlScale":1.93,"churn":1,"dyeScale":2.65,"baseAmount":0.6,"roughness":0.74,"lacunarity":2.42,"edge":0.4,"edgeSoft":0.35,"edgeGain":1.27,"contrast":1.94,"midpoint":0.65,"glow":0.54,"sink":0.45,"grain":0,"dither":0.43,"vignette":0.12,"pointerRadius":1.51,"pointerStrength":0.92,"smear":1.44,"parallax":0.0073,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#020","added":"2026-08-22","config":{"bgColor":"#f8f1e9","colorA":"#ebe0d0","colorB":"#f0603a","colorC":"#35709f","colorD":"#fffaf3","scale":0.2,"speed":0.33,"flow":0.04,"curl":1.1,"curlScale":1.3,"churn":0.3,"dyeScale":3,"baseAmount":0.74,"roughness":0.56,"lacunarity":1.8,"edge":0.5,"edgeSoft":0.36,"edgeGain":0.38,"contrast":1.85,"midpoint":0.5,"glow":0.1,"sink":0.16,"grain":0,"grainAnim":0,"dither":1.1,"vignette":0.1,"cursor":1,"pointerRadius":1.5,"pointerStrength":0.12,"smear":0.55,"parallax":0.001,"maxDpr":1}},
+    {"name":"Dilute#021","added":"2026-08-23","config":{"bgColor":"#05070a","colorA":"#111724","colorB":"#ea2470","colorC":"#295acb","colorD":"#fdf1f1","scale":0.2,"speed":0.33,"flow":0.045,"curl":0.31,"curlScale":0.97,"churn":0.45,"dyeScale":1.75,"baseAmount":0.44,"roughness":0.59,"lacunarity":2.86,"edge":0.46,"edgeSoft":0.19,"edgeGain":0.31,"contrast":0.9,"midpoint":0.58,"glow":0.14,"sink":0.13,"grain":0,"grainAnim":0,"dither":1.28,"vignette":0.18,"cursor":1,"pointerRadius":0.74,"pointerStrength":0.66,"smear":0.61,"parallax":0.004,"maxDpr":1}},
+    {"name":"Dilute#022","added":"2026-08-23","config":{"bgColor":"#05070e","colorA":"#0d1226","colorB":"#23306a","colorC":"#7d8ccf","colorD":"#e9edfb","scale":0.2,"speed":0.33,"flow":0.07,"curl":0.62,"curlScale":1.1,"churn":0.5,"dyeScale":2.1,"baseAmount":0.7,"roughness":0.55,"lacunarity":2.05,"edge":0.55,"edgeSoft":0.3,"edgeGain":0.4,"contrast":1.25,"midpoint":0.5,"glow":0.18,"sink":0.2,"grain":0,"grainAnim":0,"dither":1.15,"vignette":0.16,"cursor":1,"pointerRadius":1.2,"pointerStrength":0.16,"smear":0.7,"parallax":0.002,"maxDpr":1}},
+    {"name":"Dilute#023","added":"2026-08-23","config":{"bgColor":"#090408","colorA":"#24101e","colorB":"#f018ae","colorC":"#11aace","colorD":"#f7e3f8","scale":0.2,"speed":0.33,"flow":0.06,"curl":0.38,"curlScale":0.97,"churn":0.5,"dyeScale":1.64,"baseAmount":0.47,"roughness":0.76,"lacunarity":2.81,"edge":0.37,"edgeSoft":0.22,"edgeGain":0.31,"contrast":0.9,"midpoint":0.61,"glow":0.14,"sink":0.16,"grain":0,"grainAnim":0,"dither":1.27,"vignette":0.14,"cursor":1,"pointerRadius":1.05,"pointerStrength":0.34,"smear":0.95,"parallax":0.006,"maxDpr":1}},
+    {"name":"Dilute#024","added":"2026-08-22","config":{"bgColor":"#f4ece0","colorA":"#e8dcc6","colorB":"#d2bb95","colorC":"#b0905f","colorD":"#7a5f39","scale":0.2,"speed":0.33,"flow":0.06,"curl":1.2,"curlScale":1.35,"churn":0.45,"dyeScale":2.9,"baseAmount":0.72,"roughness":0.5,"lacunarity":2.2,"edge":0.55,"edgeSoft":0.3,"edgeGain":0.45,"contrast":1.85,"midpoint":0.5,"glow":0.16,"sink":0.22,"grain":0,"dither":1.1,"vignette":0.12,"pointerRadius":1.3,"pointerStrength":0.18,"smear":0.9,"parallax":0.0025,"maxDpr":1,"grainAnim":0,"cursor":1}},
+    {"name":"Dilute#025","added":"2026-08-23","config":{"bgColor":"#0b0306","colorA":"#240f17","colorB":"#f41064","colorC":"#194fb9","colorD":"#fae6e7","scale":0.2,"speed":0.33,"flow":0.045,"curl":0.47,"curlScale":0.71,"churn":0.3,"dyeScale":2.33,"baseAmount":0.49,"roughness":0.63,"lacunarity":1.63,"edge":0.41,"edgeSoft":0.25,"edgeGain":0.27,"contrast":0.79,"midpoint":0.63,"glow":0.14,"sink":0.16,"grain":0,"grainAnim":0,"dither":1.18,"vignette":0.19,"cursor":1,"pointerRadius":0.94,"pointerStrength":0.45,"smear":0.43,"parallax":0.013,"maxDpr":1}}
+  ]
+}
+</script>
+
+<script>
+/* ====== CONFIG ====== */
+const CONFIG = {
+  bgColor:  '#edeae2',
+  colorA:   '#e3ded1',
+  colorB:   '#c40f2e',
+  colorC:   '#d8d3c0',
+  colorD:   '#f7f4ee',
+
+  scale:            0.2,
+  speed:            0.33,      // the house value — the SAME in every gradient. Do not re-tune per file
+  flow:             0.055,
+  curl:             0.4,
+  curlScale:        0.72,
+  churn:            0.45,      // the stir's own clock — 1 is the rate the curl was written at
+  dyeScale:         1.90,
+  baseAmount:       0.26,
+  roughness:        0.64,
+  lacunarity:       2.9,
+
+  edge:             0.53,
+  edgeSoft:         0.28,
+  edgeGain:         0.26,
+  contrast:         1.02,
+  midpoint:         0.53,
+  glow:             0.10,
+  sink:             0.12,
+
+  grain:            0,        // off by default — house grain, turn it up to taste
+
+  grainAnim:        0,        // 0 static · 1 re-seeds the grain like film
+  dither:           1.57,
+  vignette:         0.11,
+
+  cursor:           1,         // 1 follows the hand · 0 ignores it (fully ambient)
+
+  pointerRadius:    1.75,
+  pointerStrength:  0.78,
+  smear:            0.65,
+  parallax:         0.005,
+
+  maxDpr:           1       // 1x by default. raise it only if the look demands it
+}
+
+/* ====== COLOR PRESETS — 20 per gradient, grouped. Colours only, never effect knobs. ====== */
+const PRESETS = {
+  dark: {
+    'Indigo Bloom':  { bgColor: '#070810', colorA: '#121734', colorB: '#2c3a78', colorC: '#7f8fd4', colorD: '#eceffc' },
+    'Deep Harbour':  { bgColor: '#060a12', colorA: '#0d1a2e', colorB: '#1f3a5c', colorC: '#6d97bf', colorD: '#dfeaf5' },
+    'Nocturne Plum': { bgColor: '#08070d', colorA: '#171426', colorB: '#372f52', colorC: '#7a6f9c', colorD: '#e6e0f2' },
+    'Charcoal Silk': { bgColor: '#070707', colorA: '#16171a', colorB: '#33363c', colorC: '#757a84', colorD: '#e6e8ec' }
+  },
+  cool: {
+    'Sea Glass':    { bgColor: '#061014', colorA: '#0e2a30', colorB: '#26606a', colorC: '#7cb8bd', colorD: '#eaf7f6' },
+    'Iris Mist':    { bgColor: '#070b14', colorA: '#131d33', colorB: '#2f4a7a', colorC: '#8aa6d6', colorD: '#eef2fb' },
+    'Frost Sage':   { bgColor: '#08100e', colorA: '#142420', colorB: '#33564c', colorC: '#8fb8a8', colorD: '#edf6f1' },
+    'Powder Steel': { bgColor: '#080b0f', colorA: '#171f28', colorB: '#38495c', colorC: '#93a8bd', colorD: '#eef2f7' }
+  },
+  warm: {
+    'Apricot Dusk': { bgColor: '#0d0805', colorA: '#2a180f', colorB: '#6e3d26', colorC: '#d19a72', colorD: '#ffe8d2' },
+    'Rose Clay':    { bgColor: '#0b0607', colorA: '#261418', colorB: '#5f3038', colorC: '#bd8189', colorD: '#fbe4e2' },
+    'Honey Ash':    { bgColor: '#0a0805', colorA: '#221c12', colorB: '#574429', colorC: '#b39a6c', colorD: '#f7edd8' },
+    'Copper Veil':  { bgColor: '#0b0604', colorA: '#27140d', colorB: '#653524', colorC: '#c08163', colorD: '#ffe6d6' }
+  },
+  muted: {
+    'Linen Dust':   { bgColor: '#0a0908', colorA: '#1f1d19', colorB: '#4a4640', colorC: '#9a938a', colorD: '#efeae1' },
+    'Lavender Ash': { bgColor: '#09080b', colorA: '#1c1a22', colorB: '#443f52', colorC: '#8f88a0', colorD: '#ece8f1' },
+    'Olive Smoke':  { bgColor: '#090a08', colorA: '#1c1f19', colorB: '#444a3b', colorC: '#8f9880', colorD: '#eaeee1' },
+    'Blue Fog':     { bgColor: '#08090c', colorA: '#1a1e24', colorB: '#3f4854', colorC: '#8b95a3', colorD: '#e9edf2' }
+  },
+  light: {
+    'Porcelain':   { bgColor: '#efece6', colorA: '#eae6de', colorB: '#d8d2c6', colorC: '#ada598', colorD: '#3a3630' },
+    'Powder Blue': { bgColor: '#eef3f8', colorA: '#e3ecf6', colorB: '#c3d7ea', colorC: '#7fa3c6', colorD: '#1d3c5e' },
+    'Blush Paper': { bgColor: '#f7efe9', colorA: '#f2e3da', colorB: '#e3c3b3', colorC: '#c08b79', colorD: '#4a2a22' },
+    'Sea Foam':    { bgColor: '#ecf4f1', colorA: '#e0efe9', colorB: '#c1ded2', colorC: '#7fae9d', colorD: '#23423a' }
+  }
+}
+
+
+/* ====== DEFAULTS + PERSISTENCE (loaded BEFORE anything is built) ====== */
+const DEFAULTS = JSON.parse(JSON.stringify(CONFIG))
+const STORAGE_KEY = 'getlayers:04-dilute'
+/* Opened on its own, this file remembers what you rolled: ⟳ reload comes back to it and
+   ↺ reset throws it away. Embedded in the gallery it must NOT — there the file is what is
+   being looked at, and a look remembered in this browser would beat the file itself: the
+   card's still would be the saved defaults while its live preview showed something else
+   entirely. Only ⤓ preview changes what this gradient is, and it changes the file. */
+const OWN_WINDOW = window.parent === window
+try { const s = OWN_WINDOW && JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); if (s) for (const k in s) if (k in CONFIG) CONFIG[k] = s[k] } catch (e) {}
+function saveConfig() { if (!OWN_WINDOW) return; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(CONFIG)) } catch (e) {} }
+
+function hexToVec3(hex) {
+  const n = parseInt(hex.slice(1), 16)
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]
+}
+
+/* ====== GL BOILERPLATE (frozen chrome — do not edit per gradient) ====== */
+const canvas = document.getElementById('gl')
+const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'high-performance' })
+if (!gl) {
+  document.getElementById('fade').style.opacity = 0
+  document.getElementById('ui-panel').style.display = 'none'
+  document.body.insertAdjacentHTML('beforeend', '<p style="position:fixed;inset:0;display:grid;place-items:center;color:#889;font:13px system-ui">WebGL2 is not available in this browser.</p>')
+  throw new Error('no webgl2')
+}
+
+const VERT = `#version 300 es
+void main() {
+  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`
+
+/* ======================================================================
+   DILUTE — dye going into water, and the rim of the bloom is the picture.
+   The stir is the CURL of a noise field rather than its gradient: a curl is
+   divergence-free, so the flow folds the dye over and over without ever compressing
+   it into a sink, which is the difference between marbling and a smear. On top of it
+   sits the one thing that says watercolour rather than smoke — an edge term that
+   returns high only in a narrow band of concentration, so pigment piles at the rim of
+   every bloom the way it does when a wet pool dries from the outside in. The trail
+   feeds the dye in, offset by the same flow field, so what the cursor lays down is
+   already moving with the water.
+   ====================================================================== */
+const FRAG = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+
+uniform vec2  iResolution;
+uniform float iTime;
+uniform vec2  iMouse;          // the body node — aspect-corrected, same space as uv
+uniform vec2  iMouseVel;       // lead node minus body node — a velocity proxy
+uniform vec2  iMouseWake;      // a third, much slower node — the tail of the trail
+
+uniform vec3  uBgColor, uColorA, uColorB, uColorC, uColorD;
+uniform float uScale, uSpeed, uFlow, uCurl, uCurlScale;
+uniform float uDyeScale, uBaseAmount, uRoughness, uLacunarity, uEdge;
+uniform float uEdgeSoft, uEdgeGain, uContrast, uMidpoint, uGlow;
+uniform float uSink, uGrain, uDither, uVignette, uPointerRadius;
+uniform float uPointerStrength, uSmear, uParallax, uChurn;
+
+#define TRAIL_TAPS 6
+
+vec2 hash2(vec2 p) {
+  p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+  return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+}
+
+float snoise(vec2 p) {
+  const float K1 = 0.366025404, K2 = 0.211324865;
+  vec2 i = floor(p + (p.x + p.y) * K1);
+  vec2 a = p - i + (i.x + i.y) * K2;
+  float m = step(a.y, a.x);
+  vec2 o = vec2(m, 1.0 - m);
+  vec2 b = a - o + K2;
+  vec2 c = a - 1.0 + 2.0 * K2;
+  vec3 h = max(0.5 - vec3(dot(a, a), dot(b, b), dot(c, c)), 0.0);
+  vec3 n = h * h * h * h * vec3(dot(a, hash2(i)), dot(b, hash2(i + o)), dot(c, hash2(i + 1.0)));
+  return dot(n, vec3(70.0));
+}
+
+vec2 rot(vec2 p, float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c) * p; }
+
+/* THE TOUCH. The shader has no memory, so the tail is reconstructed from three
+   pointer nodes: TRAIL_TAPS gaussians strung along the segment between the slow
+   wake node and the body node, weighted toward the head. A resting cursor puts
+   every tap in the same place and the result is one clean gaussian of exactly
+   1.0 at the centre; a moving cursor stretches them into a tapered ribbon that
+   melts away from the back as the wake catches up. No branch, no jump, and the
+   falloff is the same gaussian at every point along it. */
+float trail(vec2 uv, float radius) {
+  /* The sample point is wobbled by a slow field first. A gaussian is a perfect
+     circle, and a perfect circle parked under a resting cursor is the one thing
+     that reads as drawn rather than felt; warping the coordinate by a fraction
+     of the radius makes the touch an organic patch that breathes. */
+  vec2 wob = vec2(snoise(uv * 1.7 + vec2(0.0, iTime * 0.05)),
+                  snoise(uv * 1.7 + vec2(4.3, -iTime * 0.04)));
+  uv += wob * radius * 0.22;
+  float a = 0.0, wsum = 0.0;
+  float r2 = max(1e-4, radius * radius);
+  for (int i = 0; i < TRAIL_TAPS; i++) {
+    float k = float(i) / float(TRAIL_TAPS - 1);
+    vec2 c = mix(iMouseWake, iMouse, k);
+    vec2 dd = uv - c;
+    float w = mix(0.28, 1.0, k);
+    a += w * exp(-dot(dd, dd) / r2);
+    wsum += w;
+  }
+  return a / wsum;
+}
+
+vec3 ramp4(float t) {
+  vec3 c = mix(uColorA, uColorB, smoothstep(0.00, 0.36, t));
+  c = mix(c, uColorC, smoothstep(0.32, 0.70, t));
+  c = mix(c, uColorD, smoothstep(0.66, 1.00, t));
+  return c;
+}
+
+/* A SOFT SHOULDER instead of a clamp. clamp((f - mid) * contrast + 0.5) plateaus wherever
+   the field runs past either end, and a plateau is a flat patch of pure colour with a
+   visible edge around it — the loudest single way a gradient stops looking expensive.
+   tanh has the same slope through the middle and saturates smoothly, so the highlights
+   roll off and nothing ever reaches the rail. Same two knobs, no plateau. */
+float tone(float x) {
+  return 0.5 + 0.5 * tanh((x - uMidpoint) * uContrast * 2.2);
+}
+
+// triangular-PDF dither — the only reliable cure for 8-bit gradient banding
+float triDither(vec2 fc) {
+  float a = fract(sin(dot(fc, vec2(12.9898, 78.233))) * 43758.5453);
+  float b = fract(sin(dot(fc + 17.0, vec2(12.9898, 78.233))) * 43758.5453);
+  return (a + b - 1.0) / 255.0;
+}
+
+#define OCT 3
+
+float fbm(vec2 p) {
+  float v = 0.0, amp = 0.5;
+  for (int i = 0; i < OCT; i++) { v += amp * snoise(p); p = p * uLacunarity + vec2(2.9, 6.1); amp *= uRoughness; }
+  return v;
+}
+
+/* A divergence-free stir: the curl of a scalar noise field. Advecting by a curl rather
+   than by a gradient is what keeps the dye from piling up in sinks — the flow folds it
+   over itself indefinitely and never squeezes it into a blob. */
+vec2 curlFlow(vec2 p, float t) {
+  const float e = 0.13;
+  float n1 = fbm(p + vec2(0.0, e) + vec2(0.0, t * 0.10));
+  float n2 = fbm(p - vec2(0.0, e) + vec2(0.0, t * 0.10));
+  float n3 = fbm(p + vec2(e, 0.0) - vec2(t * 0.08, 0.0));
+  float n4 = fbm(p - vec2(e, 0.0) - vec2(t * 0.08, 0.0));
+  return vec2(n1 - n2, n4 - n3) / (2.0 * e);
+}
+
+
+// ---- house grain. ONE look across the collection: an integer hash (no sin() streaks),
+// triangular so it reads as film rather than static, weighted into the midtones so it
+// never crusts a black or a white. Static by default; uGrainAnim re-seeds it 24×/s.
+uniform float uGrainAnim;
+float houseGrain(vec2 fc) {
+  uvec2 q = uvec2(fc) * uvec2(1597334677u, 3812015801u)
+          + uint(floor(iTime * 24.0 * uGrainAnim)) * 2654435769u;
+  uint n = q.x ^ q.y; n = n * 1664525u + 1013904223u; n ^= n >> 16u; n *= 2246822519u; n ^= n >> 13u;
+  float a = float(n & 0xffffu) / 65535.0;
+  n *= 3266489917u; n ^= n >> 16u;
+  float b = float(n & 0xffffu) / 65535.0;
+  return a + b - 1.0;
+}
+void main() {
+  vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution) / iResolution.y;
+  float t = iTime * uSpeed;
+
+  vec2 p = (uv - iMouse * uParallax) * uScale;
+  /* uChurn is the stir's own clock. The dye field drifts at uFlow, but the curl that folds
+     it turns at rates baked into curlFlow — and those rates are the ONLY thing moving once
+     the field is zoomed far in, because a tiny p makes the whole frame one feature of the
+     noise. Slowing the stir is what keeps a wide-open scale ambient instead of churning. */
+  vec2 v = curlFlow(p * uCurlScale, t * uChurn) * uCurl * 0.22;
+
+  float base = fbm((p + v) * uDyeScale + vec2(0.0, t * uFlow)) * 0.5 + 0.5;
+
+  // the dye the cursor lays down is displaced by the SAME flow, so it drifts as it lands
+  float tr = trail(uv + v * uSmear * 0.22, uPointerRadius);
+
+  /* The pointer ADDS to a field that already spans zero to one, so its coefficient has to
+     be small: a touch that contributes as much as the whole ground does is not a drop of
+     dye, it is a floodlight, and it clips the frame to white wherever the hand rests. */
+  float conc = base * uBaseAmount + tr * uPointerStrength * 0.45;
+
+  /* THE WATERCOLOUR EDGE. High only inside a narrow band of concentration, so pigment
+     collects at the rim of a pool instead of at its brightest point. One product of two
+     smoothsteps; it is the entire difference between this and coloured smoke. */
+  float edge = smoothstep(uEdge - uEdgeSoft, uEdge, conc) * (1.0 - smoothstep(uEdge, uEdge + uEdgeSoft, conc));
+
+  float f = tone(conc + edge * uEdgeGain);
+
+  vec3 col = ramp4(f);
+  col += uColorD * uGlow * pow(f, 4.0);
+  col = mix(uBgColor, col, smoothstep(0.0, max(0.01, uSink), f) * 0.90 + 0.10);
+
+  col *= 1.0 - uVignette * dot(uv, uv);
+  { float hgL = clamp(dot(col, vec3(0.299, 0.587, 0.114)), 0.0, 1.0);
+    col += houseGrain(gl_FragCoord.xy) * uGrain * mix(1.0, 4.0 * hgL * (1.0 - hgL), 0.6); }
+  col += triDither(gl_FragCoord.xy) * uDither;
+
+  fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}`
+
+function compile(type, src) {
+  const sh = gl.createShader(type)
+  gl.shaderSource(sh, src)
+  gl.compileShader(sh)
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh))
+  return sh
+}
+
+const program = gl.createProgram()
+gl.attachShader(program, compile(gl.VERTEX_SHADER, VERT))
+gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAG))
+gl.linkProgram(program)
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program))
+gl.useProgram(program)
+gl.bindVertexArray(gl.createVertexArray())
+
+const LOC = {}
+const loc = n => (n in LOC ? LOC[n] : (LOC[n] = gl.getUniformLocation(program, n)))
+const u1f = (n, v) => gl.uniform1f(loc(n), v)
+const u2f = (n, x, y) => gl.uniform2f(loc(n), x, y)
+const u3c = (n, hex) => { const c = hexToVec3(hex); gl.uniform3f(loc(n), c[0], c[1], c[2]) }
+
+/* ====== CONFIG → UNIFORMS ====== */
+function applyConfig() {
+  gl.useProgram(program)
+  u3c('uBgColor', CONFIG.bgColor)
+  u3c('uColorA', CONFIG.colorA)
+  u3c('uColorB', CONFIG.colorB)
+  u3c('uColorC', CONFIG.colorC)
+  u3c('uColorD', CONFIG.colorD)
+  u1f('uScale', CONFIG.scale)
+  u1f('uSpeed', CONFIG.speed)
+  u1f('uFlow', CONFIG.flow)
+  u1f('uCurl', CONFIG.curl)
+  u1f('uCurlScale', CONFIG.curlScale)
+  u1f('uChurn', CONFIG.churn)
+  u1f('uDyeScale', CONFIG.dyeScale)
+  u1f('uBaseAmount', CONFIG.baseAmount)
+  u1f('uRoughness', CONFIG.roughness)
+  u1f('uLacunarity', CONFIG.lacunarity)
+  u1f('uEdge', CONFIG.edge)
+  u1f('uEdgeSoft', CONFIG.edgeSoft)
+  u1f('uEdgeGain', CONFIG.edgeGain)
+  u1f('uContrast', CONFIG.contrast)
+  u1f('uMidpoint', CONFIG.midpoint)
+  u1f('uGlow', CONFIG.glow)
+  u1f('uSink', CONFIG.sink)
+  u1f('uGrain', CONFIG.grain)
+  u1f('uGrainAnim', CONFIG.grainAnim)
+  u1f('uDither', CONFIG.dither)
+  u1f('uVignette', CONFIG.vignette)
+  u1f('uPointerRadius', CONFIG.pointerRadius)
+  u1f('uPointerStrength', CONFIG.pointerStrength)
+  u1f('uSmear', CONFIG.smear)
+  u1f('uParallax', CONFIG.parallax)
+  resize()
+}
+
+/* ====== RESIZE ====== */
+let dpr = 1
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, CONFIG.maxDpr)
+  const w = Math.max(1, Math.round(innerWidth * dpr))
+  const h = Math.max(1, Math.round(innerHeight * dpr))
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
+  gl.viewport(0, 0, w, h)
+  gl.useProgram(program)
+  u2f('iResolution', w, h)
+}
+/* Coalesced to one resize per frame. A window drag or a phone rotation fires resize far
+   faster than the display refreshes, and every raw call reallocates the drawing buffer and
+   re-uploads iResolution — that burst is the hitch you feel while dragging an edge. */
+let resizeQueued = false
+addEventListener('resize', () => {
+  if (resizeQueued) return
+  resizeQueued = true
+  requestAnimationFrame(() => { resizeQueued = false; resize() })
+}, { passive: true })
+
+/* ====== POINTER (a handful of scalars — the only per-frame CPU maths allowed) ====== */
+const mouse = { x: 0, y: 0, ax: 0, ay: 0, wx: 0, wy: 0, tx: 0, ty: 0 }
+/* One handler for both events, and it does exactly one job: write the target. Everything
+   that moves is integrated in the render loop, so a flick that fires forty events inside a
+   single frame costs the same as one that fires one — and a touch aims on contact instead
+   of staying dead until the first drag. */
+const aim = e => {
+  const a = innerWidth / innerHeight
+  mouse.tx = (e.clientX / innerWidth - 0.5) * a
+  mouse.ty = (0.5 - e.clientY / innerHeight)
+}
+addEventListener('pointermove', aim, { passive: true })
+addEventListener('pointerdown', aim, { passive: true })
+
+/* ====== RENDER LOOP ====== */
+/* The loop does exactly four things: step the pointer followers by elapsed time, upload the
+   pointer uniforms, draw one triangle, tick the fps readout. Everything else is the shader's job. */
+const fadeEl = document.getElementById('fade')
+const fpsEl = document.getElementById('ui-fps')
+
+let visible = true
+new IntersectionObserver(es => { visible = es[0].isIntersecting }, { threshold: 0 }).observe(canvas)
+
+const t0 = performance.now()
+let prevT = t0, clock = 0, fpsT = t0, fpsN = 0
+function frame(now) {
+  requestAnimationFrame(frame)
+
+  /* PACING — one clamped clock drives everything below it.
+     `ms` is the real frame interval pinned to [4.17, 50] and `s` is that interval measured
+     in 60 Hz frames, so every ease in this loop advances by elapsed TIME rather than by
+     frame count — the same follow-lag on a 60, 120 or 144 Hz panel instead of a chase that
+     doubles in speed when the monitor does. The upper clamp on `s` is what stops a dropped
+     frame or a GC pause from flinging the chain across the screen in one step, and it sits
+     low enough that no follower can overshoot into a wobble. The shader clock is accumulated
+     from the SAME clamped interval instead of read off the wall clock — rAF stops in a
+     background tab but wall time does not, and handing the shader that gap is exactly what
+     makes a field lurch on the way back. Clamped, an alt-tab costs a pause and never a jump. */
+  const raw = now - prevT
+  prevT = now
+  if (!visible || document.hidden) return
+  const ms = raw > 50 ? 50 : raw < 4.167 ? 4.167 : raw
+  const s = ms > 36.7 ? 2.2 : ms * 0.06
+  clock += ms * 0.001
+
+  /* Three poles, not one — a lead, a body and a wake. A single lerp can only decelerate INTO
+     its target: a direction change hinges on a corner and the tail of every move reads as
+     dead weight. A quick lead node feeds a slower body — the body is what the field follows,
+     and it swings through a turn and coasts for a beat after the hand stops. The wake is a
+     third node slower again; it is never drawn on its own, it only says where the body WAS,
+     which is what lets the shader lay a tapered trail between the two without keeping a frame
+     of history anywhere. All three rates scale with `s`, so the lag is identical at 60 Hz and
+     at 144. */
+  const kLead = 0.105 * s, kBody = 0.043 * s, kWake = 0.017 * s
+  mouse.ax += (mouse.tx - mouse.ax) * kLead
+  mouse.ay += (mouse.ty - mouse.ay) * kLead
+  mouse.x  += (mouse.ax - mouse.x)  * kBody
+  mouse.y  += (mouse.ay - mouse.y)  * kBody
+  mouse.wx += (mouse.x  - mouse.wx) * kWake
+  mouse.wy += (mouse.y  - mouse.wy) * kWake
+
+  u1f('iTime', clock)
+  /* cursor 0: the hand is ignored and the pointer eases back to where it rested — the
+     gradient goes fully ambient. Nothing else changes, so it can be flipped live. */
+  if (mouse.rest === undefined) mouse.rest = { x: mouse.tx, y: mouse.ty }
+  if (!CONFIG.cursor) { mouse.tx = mouse.rest.x; mouse.ty = mouse.rest.y }
+  u2f('iMouse', mouse.x, mouse.y)
+  u2f('iMouseVel', mouse.ax - mouse.x, mouse.ay - mouse.y)
+  u2f('iMouseWake', mouse.wx, mouse.wy)
+  gl.drawArrays(gl.TRIANGLES, 0, 3)
+
+  fpsN++
+  if (now - fpsT > 500) {
+    fpsEl.textContent = Math.round(fpsN * 1000 / (now - fpsT)) + ' fps · ' + dpr.toFixed(1) + '×'
+    fpsT = now; fpsN = 0
+  }
+}
+
+applyConfig()
+gl.drawArrays(gl.TRIANGLES, 0, 3)        // one draw before the reveal, so we never fade onto a blank canvas
+fadeEl.style.opacity = 0
+requestAnimationFrame(frame)
+
+/* ====== UI ====== */
+const numericRanges = {
+  scale:            { min: 0.2, max: 6, step: 0.01 },
+  speed:            { min: 0, max: 0.6, step: 0.005 },
+  flow:             { min: 0, max: 0.8, step: 0.005 },
+  curl:             { min: 0, max: 3, step: 0.01 },
+  curlScale:        { min: 0.1, max: 3, step: 0.01 },
+  churn:            { min: 0.1, max: 2, step: 0.05 },
+  dyeScale:         { min: 0.1, max: 4, step: 0.01 },
+  baseAmount:       { min: 0, max: 1.5, step: 0.01 },
+  roughness:        { min: 0.1, max: 0.9, step: 0.01 },
+  lacunarity:       { min: 1.2, max: 3.2, step: 0.01 },
+  edge:             { min: 0, max: 1.4, step: 0.01 },
+  edgeSoft:         { min: 0.02, max: 0.6, step: 0.01 },
+  edgeGain:         { min: 0, max: 1.5, step: 0.01 },
+  contrast:         { min: 0.2, max: 4, step: 0.01 },
+  midpoint:         { min: 0, max: 1, step: 0.01 },
+  glow:             { min: 0, max: 1.5, step: 0.01 },
+  sink:             { min: 0.01, max: 0.6, step: 0.01 },
+  grain:            { min: 0, max: 0.12, step: 0.002 },
+  grainAnim:  { min: 0, max: 1, step: 1 },
+  dither:           { min: 0, max: 2, step: 0.01 },
+  vignette:         { min: 0, max: 0.8, step: 0.01 },
+  cursor:    { min: 0, max: 1, step: 1 },
+  pointerRadius:    { min: 0.05, max: 2, step: 0.01 },
+  pointerStrength:  { min: 0, max: 2, step: 0.01 },
+  smear:            { min: 0, max: 3, step: 0.01 },
+  parallax:         { min: 0, max: 0.1, step: 0.001 },
+  maxDpr:           { min: 0.5, max: 2, step: 0.1 }
+}
+const SECTIONS = [
+  ['palette', ['bgColor', 'colorA', 'colorB', 'colorC', 'colorD']],
+  ['field', ['scale', 'speed', 'flow', 'curl', 'curlScale', 'churn', 'dyeScale', 'baseAmount', 'roughness', 'lacunarity']],
+  ['tone', ['edge', 'edgeSoft', 'edgeGain', 'contrast', 'midpoint', 'glow', 'sink']],
+  ['finish', ['grain', 'grainAnim', 'dither', 'vignette']],
+  ['pointer', ['pointerRadius', 'pointerStrength', 'smear', 'parallax', 'cursor']],
+  ['perf', ['maxDpr']]
+]
+
+/* the group chip highlight follows every change, so it goes out the moment a
+   slider moves off the variant it is lit for */
+let uiAfterApply = null
+function apply() { applyConfig(); saveConfig(); renderSnapshot(); if (uiAfterApply) uiAfterApply() }
+
+function setupColorUI() {
+  const host = document.getElementById('ui-rows')
+  const inputs = {}
+  for (const [name, keys] of SECTIONS) {
+    const h = document.createElement('div'); h.className = 'ui-sec'; h.textContent = name; host.appendChild(h)
+    for (const k of keys) {
+      const row = document.createElement('div'); row.className = 'ui-row'
+      const lab = document.createElement('label'); lab.textContent = k; lab.title = k
+      const val = document.createElement('span')
+      let inp
+      if (typeof CONFIG[k] === 'string') {
+        inp = document.createElement('input'); inp.type = 'color'; inp.value = CONFIG[k]
+        inp.oninput = e => { CONFIG[k] = e.target.value; val.textContent = ''; apply() }
+      } else {
+        const r = numericRanges[k] || { min: 0, max: Math.max(1, CONFIG[k] * 2), step: 0.01 }
+        inp = document.createElement('input'); inp.type = 'range'
+        inp.min = r.min; inp.max = r.max; inp.step = r.step; inp.value = CONFIG[k]
+        val.textContent = (+CONFIG[k]).toFixed(Number.isInteger(r.step) ? 0 : 2)
+        inp.oninput = e => {
+          let v = parseFloat(e.target.value)
+          if (Number.isInteger(r.step)) v = Math.round(v / r.step) * r.step
+          CONFIG[k] = v; val.textContent = v.toFixed(Number.isInteger(r.step) ? 0 : 2); apply()
+        }
+      }
+      inputs[k] = inp
+      row.append(lab, inp, val); host.appendChild(row)
+    }
+  }
+
+  const sel = document.getElementById('ui-preset')
+  sel.innerHTML = '<option value="">— preset —</option>' + Object.entries(PRESETS)
+    .map(([group, set]) => `<optgroup label="${group}">` + Object.keys(set).map(n => `<option>${n}</option>`).join('') + '</optgroup>')
+    .join('')
+  sel.onchange = e => {
+    const set = Object.values(PRESETS).find(g => e.target.value in g)
+    const p = set && set[e.target.value]
+    if (!p) return
+    for (const k in p) { CONFIG[k] = p[k]; if (inputs[k]) inputs[k].value = p[k] }
+    apply()
+  }
+
+  document.getElementById('ui-head').onclick = () => document.getElementById('ui-panel').classList.toggle('closed')
+  document.getElementById('ui-reload').onclick = () => location.reload()
+  document.getElementById('ui-reset').onclick = () => { localStorage.removeItem(STORAGE_KEY); location.reload() }
+  document.getElementById('ui-copy').onclick = () => navigator.clipboard.writeText(document.getElementById('ui-snapshot').textContent)
+
+  /* ---- the three dice and the save (frozen chrome — do not edit per gradient).
+     A roll writes the slider and lets the slider's own handler do the rest, so a
+     throw costs exactly what dragging costs and nothing here knows about uniforms.
+     speed is never rolled: 0.33 is the house value the whole collection shares. */
+  const uiSectionKeys = {}
+  for (const [name, keys] of SECTIONS) uiSectionKeys[name] = keys
+  const FIXED_SECTIONS = ['palette', 'tone', 'finish', 'pointer', 'perf']
+  const uiRange = k => numericRanges[k] || { min: 0, max: Math.max(1, CONFIG[k] * 2), step: 0.01 }
+  /* grain and vignette are the two knobs the house style will not have shouting: rolled
+     across the whole range they come back as crust and as a hard black frame */
+  const SOFT_KEYS = ['grain', 'vignette']
+  /* the middle band of each slider — the ends of a range are where a gradient stops
+     being one, and a dice roll that lands there reads as broken rather than random */
+  const uiRoll = k => {
+    const r = uiRange(k)
+    const lo = SOFT_KEYS.includes(k) ? 0.04 : 0.15
+    const hi = SOFT_KEYS.includes(k) ? 0.45 : 0.85
+    const v = r.min + (r.max - r.min) * (lo + Math.random() * (hi - lo))
+    return Math.round(v / r.step) * r.step
+  }
+  const uiPoke = (k, v) => {
+    const el = inputs[k]
+    if (!el) return
+    el.value = v
+    el.dispatchEvent(new Event('input'))
+  }
+  const uiHex = (h, s, l) => {
+    h = ((h % 360) + 360) % 360; s /= 100; l /= 100
+    const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2
+    const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
+                    : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x]
+    return '#' + [r, g, b].map(v => Math.round((v + m) * 255).toString(16).padStart(2, '0')).join('')
+  }
+  /* ---- the house palette direction (set from Tress v7–v13, 2026-08-22, see
+     obsidian/Learning/Palette Library.md → "House direction"): a DEEP ground, the ground
+     lifted a touch, then one HOT saturated accent and one COOL accent 150–210° away in
+     hue, closed by an off-white tinted toward the hot one. Complementary duotone on
+     near-black — immersive, and no two rolls alike. One roll in five is the paper
+     version of the same idea (Tress v9). */
+  const rollColour = () => {
+    const keys = Object.keys(CONFIG).filter(k => typeof CONFIG[k] === 'string')
+    if (!keys.length) return
+    const r = (a, b) => a + Math.random() * (b - a)
+    /* the bands Tress actually uses — the hot one is orange, coral, amber or violet,
+       the cool one blue, teal or sea-green. Not any two hues far apart: magenta × lime
+       is also 180° and it is not this. */
+    const pick = bands => { let x = Math.random(); for (const [w, a, b] of bands) { if ((x -= w) <= 0) return r(a, b) } return r(bands[0][1], bands[0][2]) }
+    const hot = pick([[0.45, 12, 35], [0.2, 350, 372], [0.2, 255, 285], [0.15, 35, 48]])
+    const cool = hot > 250 && hot < 290 ? pick([[0.7, 165, 195], [0.3, 195, 225]]) : pick([[0.5, 200, 235], [0.35, 168, 195], [0.15, 150, 168]])
+    const groundH = Math.random() < 0.6 ? cool : hot
+    const paper = Math.random() < 0.2
+    const ramp = paper
+      ? [uiHex(hot + r(-20, 20), r(18, 32), r(94, 97)), uiHex(hot + r(-20, 20), r(20, 34), r(86, 90)),
+         uiHex(hot, r(70, 92), r(52, 60)), uiHex(cool, r(48, 72), r(44, 56)), uiHex(hot, r(40, 70), r(98, 100))]
+      : [uiHex(groundH, r(28, 60), r(2, 5)), uiHex(groundH, r(32, 65), r(7, 13)),
+         uiHex(hot, r(74, 95), r(48, 58)), uiHex(cool, r(46, 76), r(38, 54)), uiHex(hot + r(-30, 30), r(55, 90), r(93, 97))]
+    keys.forEach((k, i) => uiPoke(k, ramp[Math.min(i, ramp.length - 1)]))
+  }
+  const rollSections = pick => {
+    for (const [name, keys] of SECTIONS) {
+      if (!pick(name, keys)) continue
+      for (const k of keys) if (typeof CONFIG[k] === 'number' && k !== 'speed' && k !== 'maxDpr') uiPoke(k, uiRoll(k))
+    }
+  }
+  /* Which section holds the cursor is not a question of what this file happened to call
+     it. Most of the collection says `pointer`, but there are also `drag`, `finger` and
+     `response` — and asking for the name alone left ⁂ cursor rolling nothing at all in
+     those, while ⁂ shape rolled their cursor for them. It is the section the pointer
+     drives, and every one of them carries parallax, so that is what is asked instead. */
+  const isPointer = (name, keys) => name === 'pointer' || keys.includes('parallax')
+  /* what the cursor does */
+  const rollPointer = () => rollSections(isPointer)
+  /* the gradient's own sections — whatever this file called them — which is its shape
+     and its movement. speed is never in it: 0.33 is the value the collection shares. */
+  const rollMotion = () => rollSections((n, keys) => !FIXED_SECTIONS.includes(n) && !isPointer(n, keys))
+  /* grade and surface: contrast, midpoint, glow, grain, dither, vignette */
+  const rollTone = () => rollSections(n => n === 'tone' || n === 'finish')
+  document.getElementById('ui-rnd-color').onclick = rollColour
+  document.getElementById('ui-rnd-pointer').onclick = rollPointer
+  document.getElementById('ui-rnd-motion').onclick = rollMotion
+  document.getElementById('ui-rnd-tone').onclick = rollTone
+  document.getElementById('ui-rnd-all').onclick = () => {
+    rollColour(); rollPointer(); rollMotion(); rollTone()
+  }
+
+  /* save writes THIS file: the dev server rewrites the CONFIG block in place, marks the
+     row in the gallery as edited and re-shoots the card still. Over file:// there is
+     nothing listening, so the button says so instead of failing quietly. */
+  const uiNote = document.getElementById('ui-note')
+  const uiSay = (t, ms) => {
+    uiNote.textContent = t
+    if (ms) setTimeout(() => { if (uiNote.textContent === t) uiNote.textContent = '' }, ms)
+  }
+  /* the same line, plus a copy for whoever is running this file in a frame: a card has
+     no panel to read and the drawer's may be closed, so a silent failure looks exactly
+     like a button that does nothing */
+  const uiFail = t => {
+    uiSay(t, 9000)
+    if (window.parent !== window) parent.postMessage({ gl: 1, type: 'failed', text: t }, '*')
+  }
+  document.getElementById('ui-save').onclick = async () => {
+    const slug = decodeURIComponent((location.pathname.split('/').pop() || '')).replace(/\.html$/, '')
+    if (location.protocol === 'file:' || !slug) { uiFail('nothing was written — ⤓ save needs the dev server: npm run serve'); return }
+    uiSay('saving…')
+    try {
+      const res = await fetch('/save', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug, config: CONFIG }) })
+      let out = null
+      try { out = await res.json() } catch (e) {}
+      if (!res.ok || !out || !out.ok) throw new Error((out && out.error) ||
+        (res.status === 404 || res.status === 501
+          ? 'this server does not answer /save — stop it and run npm run serve again'
+          : 'HTTP ' + res.status))
+      localStorage.removeItem(STORAGE_KEY)      /* the file itself is the default now */
+      uiSay('saved · ' + out.changed + ' values written' + (out.preview ? ' · preview rebuilding' : ''), 6000)
+      if (window.parent !== window)
+        parent.postMessage({ gl: 1, type: 'saved', slug, changed: out.changed, preview: out.preview }, '*')
+    } catch (e) { uiFail('save failed — ' + e.message) }
+  }
+
+  /* ---- the group (frozen chrome — do not edit per gradient).
+     A roll worth keeping goes into the group, and the group lives in THIS file: the dev
+     server rewrites the JSON block under the panel, so the html carries its variants and
+     exports with them. A chip wears one, alt-click drops it. Over file:// nothing is
+     listening — the group still reads and still wears, it just cannot grow. */
+  const uiSlug = () => decodeURIComponent((location.pathname.split('/').pop() || '')).replace(/\.html$/, '')
+  const GROUP = (() => { try { return JSON.parse(document.getElementById('ui-group').textContent) } catch (e) { return null } })() || {}
+  if (!Array.isArray(GROUP.variants)) GROUP.variants = []
+  const uiGrpList = document.getElementById('ui-grp-list')
+  const uiSame = (a, b) => typeof a === 'string' ? String(b).toLowerCase() === a.toLowerCase() : Math.abs(a - b) < 1e-4
+  const markWorn = () => uiGrpList.querySelectorAll('.ui-var').forEach((el, i) => {
+    const c = (GROUP.variants[i] || {}).config || {}
+    el.classList.toggle('on', Object.keys(c).every(k => !(k in CONFIG) || uiSame(c[k], CONFIG[k])))
+  })
+  uiAfterApply = markWorn
+  /* a chip is a picture of the variant rather than a name: its palette, in ramp order */
+  function renderGroup() {
+    document.getElementById('ui-grp-n').textContent = GROUP.variants.length
+    const cols = Object.keys(CONFIG).filter(k => typeof CONFIG[k] === 'string')
+    uiGrpList.replaceChildren(...GROUP.variants.map((v, i) => {
+      const b = document.createElement('button')
+      b.type = 'button'; b.className = 'ui-var'; b.textContent = i + 1
+      const ramp = cols.map(k => (v.config || {})[k]).filter(Boolean)
+      if (ramp.length > 1) b.style.backgroundImage = `linear-gradient(115deg, ${ramp.join(', ')})`
+      b.title = (v.name || 'v' + (i + 1)) + (v.added ? ' · ' + v.added : '') + ' — click to wear it, alt-click to drop it'
+      b.onclick = e => (e.altKey ? dropVariant(i) : wearVariant(i))
+      return b
+    }))
+    markWorn()
+    /* the gallery card carries the count on a badge without opening anything */
+    if (window.parent !== window) parent.postMessage({ gl: 1, type: 'group', slug: uiSlug(), count: GROUP.variants.length }, '*')
+  }
+  /* wearing one goes through the sliders exactly as a roll does, so the read-outs, the
+     snapshot and the saved state all follow from the one code path */
+  function wearVariant(i) {
+    const c = (GROUP.variants[i] || {}).config
+    if (!c) return
+    for (const k in c) {
+      if (!(k in CONFIG) || typeof c[k] !== typeof CONFIG[k]) continue
+      if (inputs[k]) uiPoke(k, c[k]); else CONFIG[k] = c[k]
+    }
+    apply()
+    uiSay('wearing ' + (GROUP.variants[i].name || 'v' + (i + 1)) + ' — ⤓ save makes it the file default', 5000)
+  }
+  async function groupPost(op, extra) {
+    const slug = uiSlug()
+    if (location.protocol === 'file:' || !slug) { uiFail('nothing was written — the group needs the dev server: npm run serve'); return }
+    uiSay(op === 'add' ? 'adding…' : 'dropping…')
+    try {
+      const res = await fetch('/group', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(Object.assign({ slug, op }, extra)) })
+      /* tolerant on purpose: a static server answers these routes with an HTML 404/501
+         page, and "Unexpected token '<'" is not something anyone can act on */
+      let out = null
+      try { out = await res.json() } catch (e) {}
+      if (!res.ok || !out || !out.ok) throw new Error((out && out.error) ||
+        (res.status === 404 || res.status === 501
+          ? 'this server does not answer /group — stop it and run npm run serve again'
+          : 'HTTP ' + res.status))
+      GROUP.variants = out.variants
+      renderGroup()
+      uiSay(out.dup ? 'already in the group — nothing written'
+                    : out.variants.length + ' in the group · written into ' + slug + '.html', 5000)
+      if (window.parent !== window)
+        parent.postMessage({ gl: 1, type: 'grouped', slug, count: out.variants.length, op, dup: !!out.dup }, '*')
+    } catch (e) { uiFail('group failed — ' + e.message) }
+  }
+  function dropVariant(i) { groupPost('drop', { index: i }) }
+  document.getElementById('ui-add-group').onclick = () => groupPost('add', { config: CONFIG })
+  renderGroup()
+}
+
+function renderSnapshot() {
+  const body = Object.entries(CONFIG)
+    .map(([k, v]) => `  ${k}: ${typeof v === 'string' ? `'${v}'` : (+v).toFixed(Number.isInteger(v) ? 0 : 3)},`)
+    .join('\n')
+  document.getElementById('ui-snapshot').textContent = `const CONFIG = {\n${body}\n}`
+}
+
+setupColorUI()
+renderSnapshot()
+/* ====== GALLERY BRIDGE (frozen chrome — do not edit per gradient) ======
+   index.html runs this file in an iframe and shows the panel BESIDE the picture
+   instead of on top of it. Served over http it simply takes the element out of
+   here, handlers and all. Over file:// neither document may touch the other, so
+   the panel travels across as markup and comes back as one message per control —
+   the same input, the same event, the same handler a click here would have run.
+   Nothing below runs when the file is opened on its own. */
+if (window.parent !== window) {
+  const uiPanel = document.getElementById('ui-panel')
+  /* embedded, the panel belongs to the gallery beside the picture, so it must never
+     paint in here first — not on the first mount, and not on the reload its own ⟳ and
+     ↺ trigger. If nothing asks for it this was some other embed and it comes back. */
+  uiPanel.style.display = 'none'
+  const uiRestore = setTimeout(() => { uiPanel.style.display = '' }, 1500)
+  const uiCtrl = () => uiPanel.querySelectorAll('input, select, button')
+  const uiSend = m => { m.gl = 1; parent.postMessage(m, '*') }
+  /* only the panel's own rules travel — the html/body/#gl rules would tear the
+     gallery apart, and nothing there is named ui- */
+  const uiCss = () => {
+    const out = []
+    for (const sheet of document.styleSheets) {
+      let rules
+      try { rules = sheet.cssRules } catch (e) { continue }
+      for (const r of rules) if (r.selectorText && /ui-/.test(r.selectorText)) out.push(r.cssText)
+    }
+    return out.join('\n')
+  }
+  const uiState = () => uiSend({ type: 'state',
+    fps: document.getElementById('ui-fps').textContent,
+    note: document.getElementById('ui-note').textContent,
+    vals: [...uiCtrl()].map(e => e.value),
+    spans: [...uiPanel.querySelectorAll('.ui-row span')].map(e => e.textContent),
+    snap: document.getElementById('ui-snapshot').textContent })
+  let uiTick = 0
+  addEventListener('message', e => {
+    const m = e.data
+    if (!m || m.gl !== 1) return
+    if (m.type === 'lift') {
+      clearTimeout(uiRestore)
+      uiSend({ type: 'panel', html: uiPanel.outerHTML, css: uiCss() })
+      uiState()
+      clearInterval(uiTick)
+      uiTick = setInterval(uiState, 1000)   /* the fps read-out, nothing else */
+    } else if (m.type === 'card') {
+      /* a live gallery card: no panel at all, and no fade-in — the card cross-fades
+         from its still, so a second curtain here would only show as a flat wash */
+      clearTimeout(uiRestore)
+      const fadeOverlay = document.getElementById('fade')
+      if (fadeOverlay) fadeOverlay.style.display = 'none'
+    } else if (m.type === 'aim') {
+      /* the card cannot hand the frame the real cursor without stealing the click,
+         so the position is posted in and arrives as the move it would have been */
+      dispatchEvent(new PointerEvent('pointermove', { clientX: m.x * innerWidth, clientY: m.y * innerHeight }))
+    } else if (m.type === 'wear') {
+      /* the gallery's group browser, wearing one variant. It is the chip's own click —
+         nothing out there has to know what a variant is. The list is found by id, not by
+         a selector, because in the drawer the panel has been lifted into the gallery's
+         document and getElementById is the lookup that follows it there. */
+      const list = document.getElementById('ui-grp-list')
+      const chip = list && list.children[m.i]
+      if (chip) chip.click()
+    } else if (m.type === 'act') {
+      /* a gallery card presses the panel's own buttons rather than owning any state:
+         a roll from a card is the panel's roll, and its ＋ writes the same JSON */
+      const b = document.getElementById(m.id)
+      if (b && b.tagName === 'BUTTON') b.click()
+    } else if (m.type === 'set') {
+      const el = uiCtrl()[m.i]
+      if (!el) return
+      if (el.tagName === 'BUTTON') el.click()
+      else {
+        el.value = m.value
+        el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }))
+      }
+      uiState()
+    }
+  })
+}
+/* ====== END UI ====== */
+</script>
+</body>
+</html>

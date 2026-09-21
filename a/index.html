@@ -26,6 +26,9 @@
 html,body{height:100%}
 body{background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
 canvas#scene{position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:0}
+/* the stems dissolve into the page instead of being chopped by the base band */
+.floor{position:fixed;left:0;right:0;bottom:0;height:30vh;z-index:1;pointer-events:none;
+  background:linear-gradient(to top,var(--paper) 10%,rgba(237,234,226,.82) 46%,rgba(237,234,226,0))}
 
 /* ---------- masthead ---------- */
 .hero{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(16px,2.2vw,28px) clamp(16px,3vw,40px);pointer-events:none}
@@ -108,16 +111,11 @@ h1 .red{color:var(--red);font-style:italic}
   .hint i{animation:none}
 }
 </style>
-<script type="importmap">
-{ "imports": {
-  "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
-  "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
-} }
-</script>
 </head>
 <body>
 
 <canvas id="scene"></canvas>
+<div class="floor"></div>
 
 <section class="hero">
   <header class="mast rv">
@@ -164,7 +162,7 @@ h1 .red{color:var(--red);font-style:italic}
 </div>
 
 <script type="module">
-import { initBouquet } from '../assets/bouquet-bloom.js'
+import { initBloom } from '../assets/bloom-bouquet.js'
 
 /* ---- headline split per word: one sweep across two lines ---- */
 const LINES = [
@@ -186,9 +184,11 @@ for (const line of LINES) {
 }
 
 /* ---- the bouquet ---- */
-let sceneReady = false
-const bouquet = initBouquet(document.getElementById('scene'), {
-  lookY: 0.90, camDist: 7.5, camHeight: 0.10,   // the copy owns the top third, the bouquet the bottom two
+let sceneReady = false, framesIn = 0
+const flat = new URLSearchParams(location.search).has('flat')   // for screenshots on software rendering
+const bouquet = initBloom(document.getElementById('scene'), {
+  blurScale: flat ? 0 : 1,
+  onProgress(p){ framesIn = p },
   onReady(){ sceneReady = true }
 })
 
@@ -202,7 +202,7 @@ function tick(now){
   const dt = Math.min((now - last) / 1000, 0.05); last = now
   const ready = sceneReady && (now - t0) > MIN_VISIBLE
   if (ready && v >= 99.4) v = 100
-  else { const ceil = ready ? 100 : 92; v += (ceil - v) * (ready ? 6 : 1.7) * dt }
+  else { const ceil = ready ? 100 : Math.min(92, 8 + framesIn * 84); v += (ceil - v) * (ready ? 6 : 3.2) * dt }
   bar.style.width = v + '%'
   num.textContent = String(Math.round(v)).padStart(2, '0')
   if (v >= 99.9 || now - t0 > HARD_CAP) { if (!done) finish() } else requestAnimationFrame(tick)

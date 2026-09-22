@@ -14,14 +14,14 @@
  */
 
 export const CONFIG = {
-  bgColor: '#100f0d',             // the ground the footage is screened onto
+  bgColor: '#edeae2',             // warm paper: the frames composite onto it exactly
   frames: 44,
   framePath: '../assets/bloom/',
-  frameW: 1000, frameH: 889,
-  pivotX: 59, pivotY: 889,        // where the cut stem meets the bottom of its frame
+  frameW: 1000, frameH: 824,
+  pivotX: 121, pivotY: 824,        // where the cut stem meets the bottom of its frame
   imageLean: 32,                  // degrees the photographed stem already leans right
 
-  stemWidth: 0.255,               // widest stem, as a share of the viewport width
+  stemWidth: 0.285,               // widest stem, as a share of the viewport width
   anchorX: 0.5, anchorY: 1.02,    // the hand that holds them, in viewport units
   gatherX: 0.012, gatherY: 0.02,  // how loosely the stems are gathered there
 
@@ -38,16 +38,18 @@ export const CONFIG = {
 }
 
 /* back to front: apparent angle closed/open, scale, opacity, depth blur, hue shift,
- * how late this stem starts blooming, and where it sits in the gathered bunch */
+ * how late this stem starts blooming, and where it sits in the gathered bunch.
+ * On paper a faded flower reads as a printing fault, so depth is carried by blur
+ * and size instead, and the stems stay all but opaque. */
 const STEMS = [
-  { a0: -11, a1: -58, s: 0.70, alpha: 0.58, blur: 3.2, hue: 0, delay: 0.42, dx: -0.10, dy: 0.012 },
-  { a0: 12, a1: 57, s: 0.68, alpha: 0.56, blur: 3.2, hue: 0, delay: 0.46, dx: 0.11, dy: 0.016 },
-  { a0: -6, a1: -30, s: 0.66, alpha: 0.72, blur: 0, hue: 0, delay: 0.34, dx: -0.03, dy: 0.030 },
-  { a0: 7, a1: 33, s: 0.64, alpha: 0.70, blur: 0, hue: 0, delay: 0.38, dx: 0.04, dy: 0.034 },
-  { a0: -8, a1: -41, s: 0.85, alpha: 0.90, blur: 0, hue: 0, delay: 0.24, dx: -0.05, dy: 0.004 },
-  { a0: 9, a1: 43, s: 0.87, alpha: 0.90, blur: 0, hue: 0, delay: 0.28, dx: 0.06, dy: 0.006 },
-  { a0: -4, a1: -15, s: 0.78, alpha: 0.95, blur: 0, hue: 0, delay: 0.19, dx: -0.015, dy: 0.052 },
-  { a0: 5, a1: 18, s: 0.76, alpha: 0.95, blur: 0, hue: 0, delay: 0.22, dx: 0.02, dy: 0.056 },
+  { a0: -11, a1: -58, s: 0.70, alpha: 0.94, blur: 3.4, hue: 0, delay: 0.42, dx: -0.10, dy: 0.012 },
+  { a0: 12, a1: 57, s: 0.68, alpha: 0.94, blur: 3.4, hue: 0, delay: 0.46, dx: 0.11, dy: 0.016 },
+  { a0: -6, a1: -30, s: 0.66, alpha: 0.97, blur: 1.9, hue: 0, delay: 0.34, dx: -0.03, dy: 0.030 },
+  { a0: 7, a1: 33, s: 0.64, alpha: 0.97, blur: 1.9, hue: 0, delay: 0.38, dx: 0.04, dy: 0.034 },
+  { a0: -8, a1: -41, s: 0.85, alpha: 1, blur: 0, hue: 0, delay: 0.24, dx: -0.05, dy: 0.004 },
+  { a0: 9, a1: 43, s: 0.87, alpha: 1, blur: 0, hue: 0, delay: 0.28, dx: 0.06, dy: 0.006 },
+  { a0: -4, a1: -15, s: 0.78, alpha: 1, blur: 0, hue: 0, delay: 0.19, dx: -0.015, dy: 0.052 },
+  { a0: 5, a1: 18, s: 0.76, alpha: 1, blur: 0, hue: 0, delay: 0.22, dx: 0.02, dy: 0.056 },
   { a0: -5, a1: -22, s: 0.96, alpha: 1, blur: 0, hue: 0, delay: 0.11, dx: -0.02, dy: 0 },
   { a0: 6, a1: 24, s: 0.98, alpha: 1, blur: 0, hue: 0, delay: 0.15, dx: 0.03, dy: 0.002 },
   { a0: 1, a1: 3, s: 1.08, alpha: 1, blur: 0, hue: 0, delay: 0, dx: 0, dy: -0.006 }

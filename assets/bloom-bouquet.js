@@ -1,17 +1,24 @@
 /* Bouquet of real flowers, opened by the hand.
  *
  * The art direction lives in CONFIG — the scene itself never hard-codes a colour,
- * an angle or a speed. Every stem is the same photographed alstroemeria, keyed off
- * black and scrubbed through 44 frames of a real timelapse; a stem's own frame is
- * picked from the shared openness, so the outer ones lag behind the middle and the
- * bouquet unfurls instead of switching on.
+ * an angle or a speed. Every stem is the same photographed alstroemeria, scrubbed
+ * through 44 frames of a real timelapse; a stem's own frame is picked from the
+ * shared openness, so the outer ones lag behind the middle and the bouquet unfurls
+ * instead of switching on.
+ *
+ * Nothing is cut out. Each stem goes down in two passes: its matte punches a hole
+ * in whatever is already on the canvas, then the untouched photograph is added into
+ * that hole. The footage is already multiplied by its own black, so adding it back
+ * is exact — flowers occlude each other the way they would in the shot, and no edge
+ * pixel is ever recoloured, which is why there is no rim around the petals.
  */
 
 export const CONFIG = {
+  bgColor: '#100f0d',             // the ground the footage is screened onto
   frames: 44,
   framePath: '../assets/bloom/',
-  frameW: 760, frameH: 665,
-  pivotX: 44, pivotY: 665,        // where the cut stem meets the bottom of its frame
+  frameW: 1000, frameH: 889,
+  pivotX: 59, pivotY: 889,        // where the cut stem meets the bottom of its frame
   imageLean: 32,                  // degrees the photographed stem already leans right
 
   stemWidth: 0.255,               // widest stem, as a share of the viewport width
@@ -27,8 +34,7 @@ export const CONFIG = {
   parallax: 0.02, leanToPointer: 2.2, // degrees
 
   openPerPixel: 0.00135, closeRate: 0.13, openDamp: 2.8,
-  entrance: 1.25,
-  shadowColor: '#c9c3b6', shadowAlpha: 0, shadowWidth: 0.42, shadowHeight: 0.05
+  entrance: 1.25
 }
 
 /* back to front: apparent angle closed/open, scale, opacity, depth blur, hue shift,
@@ -63,19 +69,24 @@ export function initBloom (canvas, overrides = {}) {
   let aimX = 0, aimY = 0, lastX = null, lastY = null
   let born = -1, alive = true, ready = false
 
-  /* ---- the timelapse ---- */
-  const images = []
+  /* ---- the timelapse: a photograph and a matte for every frame ---- */
+  const images = [], mattes = []
+  const wanted = cfg.frames * 2
   let loaded = 0
+  const arrive = () => {
+    loaded++
+    overrides.onProgress && overrides.onProgress(loaded / wanted)
+    if (loaded === wanted) start()
+  }
   for (let i = 0; i < cfg.frames; i++) {
-    const img = new Image()
-    img.decoding = 'async'
-    img.onload = img.onerror = () => {
-      loaded++
-      overrides.onProgress && overrides.onProgress(loaded / cfg.frames)
-      if (loaded === cfg.frames) start()
+    const n = String(i).padStart(2, '0')
+    for (const [list, file] of [[images, n], [mattes, 'm' + n]]) {
+      const img = new Image()
+      img.decoding = 'async'
+      img.onload = img.onerror = arrive
+      img.src = cfg.framePath + file + '.webp'
+      list.push(img)
     }
-    img.src = cfg.framePath + String(i).padStart(2, '0') + '.webp'
-    images.push(img)
   }
 
   function resize () {
@@ -87,7 +98,7 @@ export function initBloom (canvas, overrides = {}) {
 
   function frameFor (stem, o) {
     const t = clamp((o - stem.delay) / (1 - stem.delay), 0, 1)
-    return images[Math.min(cfg.frames - 1, Math.round(t * (cfg.frames - 1)))]
+    return Math.min(cfg.frames - 1, Math.round(t * (cfg.frames - 1)))
   }
 
   function draw (now) {
@@ -95,29 +106,21 @@ export function initBloom (canvas, overrides = {}) {
     const birth = born < 0 ? 0 : clamp((now - born) / 1000 / cfg.entrance, 0, 1)
     const entr = reduced ? 1 : birth * birth * (3 - 2 * birth)
 
-    ctx.clearRect(0, 0, w, h)
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.fillStyle = cfg.bgColor
+    ctx.fillRect(0, 0, w, h)
 
     const unit = w * cfg.stemWidth / cfg.frameW           // one image pixel, on screen
     const ax = w * (cfg.anchorX + aimX * cfg.parallax)
     const ay = h * (cfg.anchorY - cfg.lift * o) + (1 - entr) * h * 0.06 + aimY * h * cfg.parallax * 0.4
     const bunch = 1 + cfg.grow * o
 
-    if (cfg.shadowAlpha > 0) {
-      const g = ctx.createRadialGradient(ax, h * 0.985, 0, ax, h * 0.985, w * cfg.shadowWidth * 0.5)
-      g.addColorStop(0, cfg.shadowColor); g.addColorStop(1, 'rgba(201,195,182,0)')
-      ctx.save()
-      ctx.globalAlpha = cfg.shadowAlpha * entr * (0.45 + 0.55 * o)
-      ctx.translate(ax, h * 0.985); ctx.scale(1, cfg.shadowHeight / cfg.shadowWidth); ctx.translate(-ax, -h * 0.985)
-      ctx.fillStyle = g
-      ctx.fillRect(ax - w * cfg.shadowWidth, h * 0.985 - w * cfg.shadowWidth, w * cfg.shadowWidth * 2, w * cfg.shadowWidth * 2)
-      ctx.restore()
-    }
-
     const t = now / 1000
     for (let i = 0; i < STEMS.length; i++) {
       const stem = STEMS[i]
-      const img = frameFor(stem, o)
-      if (!img || !img.width) continue
+      const n = frameFor(stem, o)
+      const img = images[n], matte = mattes[n]
+      if (!img || !img.width || !matte || !matte.width) continue
 
       const open = lerp(cfg.fanClosed, 1, o)
       const sway = reduced ? 0 : Math.sin(t * cfg.swaySpeed + i * 1.7) * cfg.swayAmount * (0.35 + 0.65 * o)
@@ -126,20 +129,22 @@ export function initBloom (canvas, overrides = {}) {
       const scale = unit * stem.s * bunch * lerp(0.94, 1, entr)
 
       ctx.save()
-      ctx.globalAlpha = stem.alpha * entr
-      const blur = stem.blur * cfg.blurScale
-      if (canBlur && (blur || stem.hue)) {
-        const parts = []
-        if (blur) parts.push(`blur(${blur}px)`)
-        if (stem.hue) parts.push(`hue-rotate(${stem.hue}deg)`)
-        ctx.filter = parts.join(' ')
-      }
       ctx.translate(ax + w * stem.dx * open, ay + h * stem.dy)
       ctx.rotate((angle - cfg.imageLean * mirror) * RAD)
       ctx.scale(scale * mirror, scale)
+
+      const blur = stem.blur * cfg.blurScale
+      if (canBlur && blur) ctx.filter = `blur(${blur / scale}px)`
+
+      ctx.globalCompositeOperation = 'destination-out'   // clear room for this stem
+      ctx.globalAlpha = stem.alpha * entr
+      ctx.drawImage(matte, -cfg.pivotX, -cfg.pivotY)
+
+      ctx.globalCompositeOperation = 'lighter'           // and drop the photograph in
       ctx.drawImage(img, -cfg.pivotX, -cfg.pivotY)
       ctx.restore()
     }
+    ctx.globalCompositeOperation = 'source-over'
     if (canBlur) ctx.filter = 'none'
   }
 
